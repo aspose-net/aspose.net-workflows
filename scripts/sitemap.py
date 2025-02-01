@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import xml.etree.ElementTree as ET
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -40,50 +41,57 @@ def authenticate_google_service(scopes, key_info):
         return None
 
 
-# Check sitemap status before submitting
-def check_sitemap_status(service, site_url, sitemap_url):
+# Extract nested family sitemaps from an index sitemap
+def extract_family_sitemaps(sitemap_url):
     try:
-        request = service.sitemaps().list(siteUrl=site_url)
-        response = request.execute()
-        for sitemap in response.get('sitemap', []):
-            if sitemap.get('path') == sitemap_url:
-                print(f"[INFO] Sitemap already submitted: {sitemap_url}")
-                return True
-        return False
-    except Exception as e:
-        print(f"[ERROR] Failed to check sitemap status for {sitemap_url}: {e}")
-        return False
+        response = requests.get(sitemap_url, timeout=5)
+        if response.status_code == 200:
+            tree = ET.ElementTree(ET.fromstring(response.text))
+            family_sitemaps = [url.text for url in tree.findall(".//{*}loc")]
+            return family_sitemaps
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to fetch sitemap: {sitemap_url}: {e}")
+    except ET.ParseError as e:
+        print(f"[ERROR] Failed to parse XML from {sitemap_url}: {e}")
+    return []
 
 
-# Submit sitemap to Google
+# Submit sitemap to Google (always resubmit)
 def submit_sitemap_to_google(service, site_url, sitemap_url):
     try:
         request = service.sitemaps().submit(siteUrl=site_url, feedpath=sitemap_url)
         request.execute()
-        print(f"[INFO] Submitted sitemap to Google: {sitemap_url}")
+        print(f"[INFO] Resubmitted sitemap to Google: {sitemap_url}")
     except Exception as e:
         print(f"[ERROR] Failed to submit sitemap: {sitemap_url}: {e}")
 
 
-# Check sitemap availability for given index sitemaps
+# Check sitemap availability for a given index sitemap
 def check_sitemap_availability(base_url, include_families):
     available_sitemaps = []
+    index_sitemap_url = f"{base_url}/sitemap.xml"
+
     try:
-        # Check main index sitemap
-        index_sitemap_url = f"{base_url}/sitemap.xml"
+        # Fetch and validate main sitemap index
         response = requests.get(index_sitemap_url, timeout=5)
         if response.status_code == 200:
             print(f"[INFO] Sitemap index found: {index_sitemap_url}")
             available_sitemaps.append((base_url, index_sitemap_url))
 
-        # Check family-specific sitemaps only if the subdomain supports it
-        if include_families:
-            for family in FAMILIES:
-                family_sitemap_url = f"{base_url}/{family}/sitemap.xml"
-                response = requests.head(family_sitemap_url, timeout=5)  # Lightweight check
-                if response.status_code == 200:
-                    print(f"[INFO] Family sitemap found: {family_sitemap_url}")
-                    available_sitemaps.append((base_url, family_sitemap_url))
+            # Extract nested sitemaps dynamically
+            extracted_sitemaps = extract_family_sitemaps(index_sitemap_url)
+            for extracted_sitemap in extracted_sitemaps:
+                print(f"[INFO] Extracted family sitemap: {extracted_sitemap}")
+                available_sitemaps.append((base_url, extracted_sitemap))
+
+            # Also check predefined family paths
+            if include_families:
+                for family in FAMILIES:
+                    family_sitemap_url = f"{base_url}/{family}/sitemap.xml"
+                    response = requests.head(family_sitemap_url, timeout=5)  # Lightweight check
+                    if response.status_code == 200:
+                        print(f"[INFO] Predefined family sitemap found: {family_sitemap_url}")
+                        available_sitemaps.append((base_url, family_sitemap_url))
 
     except requests.RequestException as e:
         print(f"[ERROR] Failed to fetch sitemaps from {base_url}: {e}")
@@ -128,12 +136,11 @@ def main():
         print(f"[ERROR] Failed to initialize Google Search Console service: {e}")
         return
 
-    # Process sitemaps for all subdomains and submit to Google
+    # Process sitemaps for all subdomains and resubmit them to Google
     try:
         all_sitemaps = check_all_subdomain_sitemaps(SUBDOMAINS)
         for site_url, sitemap in all_sitemaps:
-            if not check_sitemap_status(webmaster_service, site_url, sitemap):
-                submit_sitemap_to_google(webmaster_service, site_url, sitemap)
+            submit_sitemap_to_google(webmaster_service, site_url, sitemap)
     except Exception as e:
         print(f"[ERROR] Unexpected error processing sitemaps: {e}")
 
