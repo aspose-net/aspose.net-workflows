@@ -25,6 +25,10 @@ REPROCESS_DAYS_LIMIT = 30
 # Extract nested sitemaps (including multilingual ones)
 def extract_sitemaps_from_index(sitemap_url):
     try:
+        if not sitemap_url.endswith(".xml"):
+            print(f"[WARNING] Skipping non-sitemap URL: {sitemap_url}")
+            return []
+
         response = requests.get(sitemap_url, timeout=10)
         if response.status_code != 200:
             print(f"[ERROR] {sitemap_url} returned status {response.status_code}")
@@ -36,7 +40,7 @@ def extract_sitemaps_from_index(sitemap_url):
             return []
 
         tree = ET.ElementTree(ET.fromstring(content))
-        return [url.text for url in tree.findall(".//{*}loc")]
+        return [url.text for url in tree.findall(".//{*}loc") if url.text.endswith(".xml")]
     except Exception as e:
         print(f"[ERROR] Failed to fetch sitemaps from {sitemap_url}: {e}")
     return []
@@ -58,7 +62,7 @@ def get_all_sitemaps(subdomain):
             return []
 
         tree = ET.ElementTree(ET.fromstring(content))
-        extracted_sitemaps.extend([sitemap.text for sitemap in tree.findall(".//{*}loc")])
+        extracted_sitemaps.extend([sitemap.text for sitemap in tree.findall(".//{*}loc") if sitemap.text.endswith(".xml")])
 
         # Extract multilingual & nested sitemaps
         for sitemap in extracted_sitemaps.copy():
@@ -86,6 +90,10 @@ def get_all_sitemaps(subdomain):
 # Extract URLs from sitemap
 def extract_sitemap_urls(sitemap_url):
     try:
+        if not sitemap_url.endswith(".xml"):
+            print(f"[WARNING] Skipping non-sitemap URL: {sitemap_url}")
+            return []
+
         response = requests.get(sitemap_url, timeout=10)
         if response.status_code != 200:
             print(f"[ERROR] {sitemap_url} returned status {response.status_code}")
