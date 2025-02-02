@@ -1,4 +1,5 @@
 name: products.aspose.net
+
 on:
   workflow_dispatch:
     inputs:
@@ -20,11 +21,31 @@ jobs:
 
       - name: Get matching workflows
         run: |
-          # Find workflows that match the products.aspose.net.* pattern
+          # Find workflows that match products.aspose.net.*
           workflows=$(find .github/workflows -type f -name 'products.aspose.net.*.yml')
-          echo "Filtered workflows:"
-          echo "$workflows"
-          echo "$workflows" > workflows.txt
+
+          # Separate the "home" workflow from the others
+          home_workflow=""
+          filtered_workflows=""
+
+          for workflow in $workflows; do
+            if [[ "$workflow" == *"products.aspose.net-home"* ]]; then
+              home_workflow="$workflow"
+            else
+              filtered_workflows+="$workflow"$'\n'
+            fi
+          done
+
+          echo "Filtered workflows (excluding home):"
+          echo "$filtered_workflows"
+          echo "$filtered_workflows" > workflows.txt
+
+          if [[ -n "$home_workflow" ]]; then
+            echo "Home workflow found: $home_workflow"
+            echo "$home_workflow" > home_workflow.txt
+          else
+            echo "No home workflow found."
+          fi
         shell: bash
 
       - name: Install GitHub CLI
@@ -50,3 +71,24 @@ jobs:
               echo "Failed to trigger $workflow_name. Skipping..."
             fi
           done < workflows.txt
+
+      - name: Delay before triggering home workflow
+        run: |
+          echo "Waiting for 30 seconds before triggering the home workflow..."
+          sleep 30
+        if: hashFiles('home_workflow.txt') != ''
+
+      - name: Run the home workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          home_workflow=$(cat home_workflow.txt)
+          workflow_name=$(basename "$home_workflow")
+          echo "Triggering home workflow: $workflow_name with environment: $selected_environment"
+
+          if gh workflow run "$workflow_name" --field environment="$selected_environment"; then
+            echo "Successfully triggered $workflow_name"
+          else
+            echo "Failed to trigger $workflow_name."
+          fi
+        if: hashFiles('home_workflow.txt') != ''
