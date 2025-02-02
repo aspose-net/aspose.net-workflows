@@ -41,14 +41,14 @@ def authenticate_google_service(scopes, key_info):
         return None
 
 
-# Extract nested family sitemaps from an index sitemap
-def extract_family_sitemaps(sitemap_url):
+# Extract nested sitemaps from an index sitemap (including multilingual sitemaps)
+def extract_sitemaps_from_index(sitemap_url):
     try:
         response = requests.get(sitemap_url, timeout=5)
         if response.status_code == 200:
             tree = ET.ElementTree(ET.fromstring(response.text))
-            family_sitemaps = [url.text for url in tree.findall(".//{*}loc")]
-            return family_sitemaps
+            sitemaps = [url.text for url in tree.findall(".//{*}loc")]
+            return sitemaps
     except requests.RequestException as e:
         print(f"[ERROR] Failed to fetch sitemap: {sitemap_url}: {e}")
     except ET.ParseError as e:
@@ -78,10 +78,10 @@ def check_sitemap_availability(base_url, include_families):
             print(f"[INFO] Sitemap index found: {index_sitemap_url}")
             available_sitemaps.append((base_url, index_sitemap_url))
 
-            # Extract nested sitemaps dynamically
-            extracted_sitemaps = extract_family_sitemaps(index_sitemap_url)
+            # Extract all nested sitemaps (including multilingual versions)
+            extracted_sitemaps = extract_sitemaps_from_index(index_sitemap_url)
             for extracted_sitemap in extracted_sitemaps:
-                print(f"[INFO] Extracted family sitemap: {extracted_sitemap}")
+                print(f"[INFO] Extracted sitemap: {extracted_sitemap}")
                 available_sitemaps.append((base_url, extracted_sitemap))
 
             # Also check predefined family paths
@@ -92,6 +92,12 @@ def check_sitemap_availability(base_url, include_families):
                     if response.status_code == 200:
                         print(f"[INFO] Predefined family sitemap found: {family_sitemap_url}")
                         available_sitemaps.append((base_url, family_sitemap_url))
+
+                        # Extract multilingual sitemaps within family paths
+                        localized_sitemaps = extract_sitemaps_from_index(family_sitemap_url)
+                        for localized_sitemap in localized_sitemaps:
+                            print(f"[INFO] Extracted multilingual sitemap: {localized_sitemap}")
+                            available_sitemaps.append((base_url, localized_sitemap))
 
     except requests.RequestException as e:
         print(f"[ERROR] Failed to fetch sitemaps from {base_url}: {e}")
