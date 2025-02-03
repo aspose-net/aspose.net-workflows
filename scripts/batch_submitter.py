@@ -3,6 +3,7 @@ import json
 import time
 import requests
 from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # Constants
@@ -16,10 +17,18 @@ INDEXING_ENDPOINT = "https://indexing.googleapis.com/v3/urlNotifications:publish
 # Authenticate with Google Indexing API
 def authenticate_google_service():
     try:
-        credentials_info = json.loads(os.getenv('GOOGLE_CREDENTIALS_JSON'))
+        credentials_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
+        if not credentials_json:
+            print("[ERROR] GOOGLE_CREDENTIALS_JSON is not set.")
+            return None
+
+        credentials_info = json.loads(credentials_json)
         credentials = service_account.Credentials.from_service_account_info(
             credentials_info, scopes=['https://www.googleapis.com/auth/indexing']
         )
+
+        # Refresh token to get a valid access token
+        credentials.refresh(Request())
         return credentials
     except Exception as e:
         print(f"[ERROR] Authentication failed: {e}")
@@ -43,7 +52,7 @@ def submit_url(service, url, attempt=1):
         request_body = {"url": url, "type": "URL_UPDATED"}
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {service.token}"
+            "Authorization": f"Bearer {service.token}"  # Ensure fresh token
         }
 
         response = requests.post(INDEXING_ENDPOINT, json=request_body, headers=headers)
@@ -51,6 +60,10 @@ def submit_url(service, url, attempt=1):
         if response.status_code == 200:
             print(f"[INFO] Successfully submitted: {url}")
             return True
+        elif response.status_code == 401:  # Authentication failure
+            print("[ERROR] Authentication error: Refreshing token and retrying...")
+            service.refresh(Request())  # Refresh token
+            return submit_url(service, url, attempt + 1)
         elif response.status_code == 429:  # Rate limit exceeded
             wait_time = 2 ** attempt  # Exponential backoff
             print(f"[WARNING] Rate limit exceeded. Retrying {url} in {wait_time} seconds...")
