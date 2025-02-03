@@ -24,6 +24,7 @@ REPROCESS_DAYS_LIMIT = 30
 
 # Extract nested sitemaps (including multilingual ones)
 def extract_sitemaps_from_index(sitemap_url):
+    """Extracts only sitemap URLs (.xml) from an index sitemap."""
     try:
         if not sitemap_url.endswith(".xml"):
             print(f"[WARNING] Skipping non-sitemap URL: {sitemap_url}")
@@ -36,7 +37,7 @@ def extract_sitemaps_from_index(sitemap_url):
         
         content = response.text.strip()
         if not content.startswith("<?xml"):
-            print(f"[ERROR] {sitemap_url} is not a valid XML sitemap. First 100 chars: {content[:100]}")
+            print(f"[ERROR] {sitemap_url} is not a valid XML sitemap.")
             return []
 
         tree = ET.ElementTree(ET.fromstring(content))
@@ -45,8 +46,9 @@ def extract_sitemaps_from_index(sitemap_url):
         print(f"[ERROR] Failed to fetch sitemaps from {sitemap_url}: {e}")
     return []
 
-# Fetch all sitemaps for a subdomain (including multilingual and family-based ones)
+# Fetch all sitemaps for a subdomain
 def get_all_sitemaps(subdomain):
+    """Gets all sitemaps for a given subdomain, including multilingual and family-based sitemaps."""
     index_sitemap_url = f"https://{subdomain}/sitemap.xml"
     extracted_sitemaps = [index_sitemap_url]
 
@@ -58,7 +60,7 @@ def get_all_sitemaps(subdomain):
 
         content = response.text.strip()
         if not content.startswith("<?xml"):
-            print(f"[ERROR] {index_sitemap_url} is not valid XML. First 100 chars: {content[:100]}")
+            print(f"[ERROR] {index_sitemap_url} is not valid XML.")
             return []
 
         tree = ET.ElementTree(ET.fromstring(content))
@@ -87,8 +89,9 @@ def get_all_sitemaps(subdomain):
     
     return extracted_sitemaps
 
-# Extract URLs from sitemap
+# Extract URLs from sitemap (excluding .xml)
 def extract_sitemap_urls(sitemap_url):
+    """Extracts actual URLs (not .xml sitemaps) from a sitemap file."""
     try:
         if not sitemap_url.endswith(".xml"):
             print(f"[WARNING] Skipping non-sitemap URL: {sitemap_url}")
@@ -101,16 +104,17 @@ def extract_sitemap_urls(sitemap_url):
         
         content = response.text.strip()
         if not content.startswith("<?xml"):
-            print(f"[ERROR] {sitemap_url} is not valid XML. First 100 chars: {content[:100]}")
+            print(f"[ERROR] {sitemap_url} is not valid XML.")
             return []
 
         tree = ET.ElementTree(ET.fromstring(content))
         urls = []
         for url_elem in tree.findall(".//{*}loc"):
             url = url_elem.text
-            lastmod_elem = url_elem.find("./../{*}lastmod")
-            lastmod = lastmod_elem.text if lastmod_elem is not None else None
-            urls.append((url, lastmod))
+            if not url.endswith(".xml"):  # ✅ Ensure only non-sitemap URLs are added
+                lastmod_elem = url_elem.find("./../{*}lastmod")
+                lastmod = lastmod_elem.text if lastmod_elem is not None else None
+                urls.append((url, lastmod))
         return urls
     except Exception as e:
         print(f"[ERROR] Failed to fetch {sitemap_url}: {e}")
@@ -118,14 +122,17 @@ def extract_sitemap_urls(sitemap_url):
 
 # Load & Save JSON data
 def load_json(file):
+    """Loads JSON data from a file."""
     return json.load(open(file)) if os.path.exists(file) else {}
 
 def save_json(file, data):
+    """Saves JSON data to a file."""
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
 # Prepare URL batches for submission
 def prepare_batches():
+    """Prepares URL batches for submission, ensuring no sitemap URLs are included."""
     processed_urls = load_json(SITEMAP_RECORD_FILE)
     batches = {}
 
@@ -147,6 +154,9 @@ def prepare_batches():
                 # Include only URLs not processed in the last 30 days
                 if not last_processed or (lastmod_date and last_processed < (datetime.now() - timedelta(days=REPROCESS_DAYS_LIMIT)).isoformat()):
                     urls_to_submit.append(url)
+
+        # ✅ Ensure only valid URLs (no .xml)
+        urls_to_submit = [url for url in urls_to_submit if not url.endswith(".xml")]
 
         batches[subdomain] = [urls_to_submit[i:i + BATCH_SIZE] for i in range(0, len(urls_to_submit), BATCH_SIZE)]
 
