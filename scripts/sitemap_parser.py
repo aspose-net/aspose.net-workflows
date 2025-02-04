@@ -19,7 +19,7 @@ FAMILY_SUBDOMAINS = [
     "kb.aspose.net", "docs.aspose.net", "products.aspose.net", "reference.aspose.net"
 ]
 FAMILIES = ['words', 'pdf', 'cells', 'imaging', 'barcode', 'tasks', 'ocr', 'cad', 'html', 'zip', 'page', 'psd', 'tex']
-BATCH_SIZE = 1000
+BATCH_SIZE = 200
 REPROCESS_DAYS_LIMIT = 30  
 
 # Extract nested sitemaps (including multilingual ones)
