@@ -4,6 +4,7 @@ import time
 import requests
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 
 # Constants
 LOGS_DIR = "logs"
@@ -95,9 +96,9 @@ def submit_batches():
                     processed_urls[url] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     success_count += 1
                     time.sleep(1)  # Avoid API limits
-
+            
             print(f"[INFO] Successfully submitted {success_count} URLs for {subdomain}.")
-            save_json(SITEMAP_RECORD_FILE, processed_urls)  # ✅ Save progress after each batch
+            save_json(SITEMAP_RECORD_FILE, processed_urls)
 
     print("[INFO] Batch submission complete.")
 
