@@ -34,7 +34,7 @@ jobs:
             echo "url=https://about-qa.aspose.net" >> $GITHUB_ENV
           fi
 
-      - name: Build docs.aspose.net with Hugo
+      - name: Build about.aspose.net with Hugo
         run: hugo --config "./configs/about.aspose.net.toml" -b "${{ env.url }}" --cleanDestinationDir --minify --templateMetrics --templateMetricsHints --enableGitInfo
 
       - name: Deploy about.aspose.net to S3
