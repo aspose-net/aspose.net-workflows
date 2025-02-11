@@ -12,7 +12,7 @@ on:
 
 jobs:
   detect-updates:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       to_process: ${{ steps.filter.outputs.to_process }}
     steps:
@@ -21,21 +21,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch latest versions from NuGet
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: python -m pip install requests
+
+      - name: Fetch Latest Versions from NuGet
         id: check_versions
         run: python scripts/check_versions.py
 
       - name: Filter Products for Processing
         id: filter
+        shell: pwsh
         run: |
-          PRODUCTS=${{ github.event.inputs.products }}
-          if [[ "$PRODUCTS" == "all" ]]; then
-            PRODUCTS=$(jq -r 'keys | join(",")' reference/status.json)
-          fi
+          $PRODUCTS = "${{ github.event.inputs.products }}"
+          if ($PRODUCTS -eq "all") {
+            $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
+          }
 
           # Determine products needing updates
-          TO_PROCESS=$(python scripts/detect_updates.py "$PRODUCTS")
-          echo "to_process=$TO_PROCESS" >> $GITHUB_OUTPUT
+          $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
+          echo "to_process=$TO_PROCESS" >> $env:GITHUB_OUTPUT
 
   process-products:
     needs: detect-updates
@@ -55,7 +64,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: python -m pip install requests
+
       - name: Download NuGet Package
+        shell: pwsh
         run: |
           dotnet nuget download ${{ matrix.product.nuget }} -Source nuget.org -OutputDirectory packages
 
@@ -66,10 +84,11 @@ jobs:
         run: python scripts/generate_docfx.py "${{ matrix.product.nuget }}"
 
       - name: Download and Run DocFX
+        shell: pwsh
         run: |
-          curl -L -o docfx.zip https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip
-          tar -xf docfx.zip -C docfx/
-          docfx/docfx metadata
+          Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
+          Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
+          docfx\docfx metadata --logLevel Warning
 
       - name: Run Post-Processor
         run: python scripts/postprocessor.py "api"
