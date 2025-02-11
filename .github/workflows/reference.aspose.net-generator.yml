@@ -75,23 +75,28 @@ jobs:
       - name: Download NuGet Package
         shell: pwsh
         run: |
-          dotnet nuget download ${{ matrix.product.nuget }} -Source nuget.org -OutputDirectory packages
+          New-Item -ItemType Directory -Path packages -Force
+          dotnet nuget download "${{ matrix.product.nuget }}" --source nuget.org --output-directory packages
 
       - name: Extract DLL & XML
-        run: python scripts/extract_files.py "${{ matrix.product.nuget }}"
+        run: python scripts\extract_files.py "${{ matrix.product.nuget }}"
 
       - name: Generate docfx.json
-        run: python scripts/generate_docfx.py "${{ matrix.product.nuget }}"
+        run: python scripts\generate_docfx.py "${{ matrix.product.nuget }}"
 
-      - name: Download and Run DocFX
+      - name: Download and Extract DocFX
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
           Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
-          docfx\docfx metadata --logLevel Warning
+          
+      - name: Run DocFX Metadata
+        shell: pwsh
+        run: |
+          .\docfx\docfx.exe metadata workspace\docfx.json --logLevel Warning
 
       - name: Run Post-Processor
-        run: python scripts/postprocessor.py "api"
+        run: python scripts\postprocessor.py "workspace\api"
 
       - name: Push Processed Content to `aspose.net`
-        run: python scripts/push_to_repo.py "${{ matrix.product.family }}"
+        run: python scripts\push_to_repo.py "${{ matrix.product.family }}"
