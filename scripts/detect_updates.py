@@ -1,21 +1,23 @@
-import json
 import sys
+import json
 
-STATUS_FILE = "reference/status.json"
+if len(sys.argv) < 2:
+    print("Error: No products specified.")
+    sys.exit(1)
 
-# Load `status.json`
-with open(STATUS_FILE, "r", encoding="utf-8") as f:
+products_to_check = sys.argv[1].split(",")
+
+# Load updates needed from check_versions.py output
+with open("reference/status.json", "r", encoding="utf-8") as f:
     status_data = json.load(f)
 
-# Get products from GitHub Actions input
-products = sys.argv[1].split(",") if len(sys.argv) > 1 else []
+updates_needed = {
+    product: status_data[product]
+    for product in products_to_check if product in status_data
+}
 
-to_process = []
+# Print JSON output for debugging
+print("Products to process:", json.dumps(updates_needed, indent=2))
 
-# Compare versions
-for family, data in status_data.items():
-    if family in products or "all" in products:
-        if "new_version" in data:
-            to_process.append({"family": family, "nuget": data["nuget"], "version": data["new_version"]})
-
-print(json.dumps(to_process))
+# Output JSON so GitHub Actions can parse it
+print(json.dumps(list(updates_needed.keys())))

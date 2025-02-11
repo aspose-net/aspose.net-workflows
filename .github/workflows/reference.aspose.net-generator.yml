@@ -44,8 +44,10 @@ jobs:
 
           # Determine products needing updates
           $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
-          echo "to_process=$TO_PROCESS" >> $env:GITHUB_OUTPUT
-
+          
+          # Ensure GitHub Actions can read the output
+          echo "to_process=$TO_PROCESS" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+  
   process-products:
     needs: detect-updates
     if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
