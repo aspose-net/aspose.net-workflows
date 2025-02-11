@@ -12,8 +12,9 @@ updates_needed = {}
 
 # Check latest NuGet versions
 for family, data in status_data.items():
-    nuget_name = data["nuget"]
+    nuget_name = data["nuget"].lower()  # Convert to lowercase for NuGet API
     print(f"Checking {family} ({nuget_name})...")  # Debugging line
+
     response = requests.get(NUGET_API_URL.format(nuget_name))
 
     if response.status_code == 200:
@@ -26,7 +27,7 @@ for family, data in status_data.items():
 
             if latest_version != data["version"]:
                 updates_needed[family] = {
-                    "nuget": nuget_name,
+                    "nuget": data["nuget"],
                     "version": latest_version
                 }
                 print(f"Update needed for {family}.")
@@ -35,6 +36,10 @@ for family, data in status_data.items():
         else:
             print(f"No versions found for {family}!")
 
+    elif response.status_code == 404:
+        print(f"ERROR: NuGet package not found for {family} ({nuget_name})!")
+        print(f"Check if {nuget_name} exists on https://www.nuget.org/packages/{nuget_name}/")
+    
     else:
         print(f"Failed to fetch data for {family}, HTTP {response.status_code}")
 
