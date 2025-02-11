@@ -34,19 +34,19 @@ for family, data in status_data.items():
                     "nuget": data["nuget"],
                     "version": latest_version
                 }
-                print(f"✅ Update needed for {family}.")
+                print(f"Update needed for {family}.")
             else:
                 print(f"Skipping {family}, version is up-to-date.")
 
         else:
-            print(f"❌ No versions found for {family}!")
+            print(f"No versions found for {family}.")
 
     elif response.status_code == 404:
-        print(f"❌ ERROR: NuGet package not found for {family} ({nuget_name})!")
+        print(f"ERROR: NuGet package not found for {family} ({nuget_name}).")
         print(f"Check if {nuget_name} exists on https://www.nuget.org/packages/{nuget_name}/")
     
     else:
-        print(f"❌ Failed to fetch data for {family}, HTTP {response.status_code}")
+        print(f"Failed to fetch data for {family}, HTTP {response.status_code}.")
 
 # Save the latest versions back to status.json
 with open(STATUS_FILE, "w", encoding="utf-8") as f:
