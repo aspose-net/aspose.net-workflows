@@ -42,12 +42,12 @@ jobs:
             $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
           }
 
-          # Determine products needing updates
+          # Run detect_updates.py to determine products needing updates
           $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
-          
-          # Ensure GitHub Actions can read the output
-          echo "to_process=$TO_PROCESS" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
-  
+
+          # Ensure GitHub Actions can parse JSON output correctly
+          echo "to_process=$(echo $TO_PROCESS | ConvertTo-Json -Compress)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
   process-products:
     needs: detect-updates
     if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
