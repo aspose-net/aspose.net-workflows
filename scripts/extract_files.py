@@ -1,41 +1,29 @@
 import os
+import glob
 import zipfile
 import sys
 
-PACKAGE_DIR = "packages/"
-EXTRACT_DIR = "extracted/"
+if len(sys.argv) < 2:
+    print("Error: No NuGet package specified.")
+    sys.exit(1)
 
-def extract_nupkg(nuget_name):
-    nupkg_path = os.path.join(PACKAGE_DIR, f"{nuget_name}.nupkg")
-    extract_path = os.path.join(EXTRACT_DIR, nuget_name)
+nuget_name = sys.argv[1]
+package_path = glob.glob(f"packages/{nuget_name}.*.nupkg")
 
-    with zipfile.ZipFile(nupkg_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_path)
+if not package_path:
+    print(f"Error: No NuGet package found for {nuget_name}.")
+    sys.exit(1)
 
-    # Find DLL & XML pairs
-    best_dll = None
-    best_xml = None
-    largest_xml_size = 0
+package_path = package_path[0]  # Use the first match
 
-    for root, _, files in os.walk(extract_path):
-        dll_file = xml_file = None
-        for file in files:
-            if file.endswith(".dll"):
-                dll_file = os.path.join(root, file)
-            elif file.endswith(".xml"):
-                xml_path = os.path.join(root, file)
-                xml_size = os.path.getsize(xml_path)
-                if xml_size > largest_xml_size:
-                    largest_xml_size = xml_size
-                    best_dll = dll_file
-                    best_xml = xml_path
+# Rename .nupkg to .zip and extract
+zip_path = package_path.replace(".nupkg", ".zip")
+os.rename(package_path, zip_path)
 
-    if best_dll and best_xml:
-        os.makedirs("workspace", exist_ok=True)
-        os.rename(best_dll, f"workspace/{nuget_name}.dll")
-        os.rename(best_xml, f"workspace/{nuget_name}.xml")
+extract_folder = f"workspace/{nuget_name}"
+os.makedirs(extract_folder, exist_ok=True)
 
-    print(f"Selected: {best_dll}, {best_xml}")
+with zipfile.ZipFile(zip_path, "r") as zip_ref:
+    zip_ref.extractall(extract_folder)
 
-if __name__ == "__main__":
-    extract_nupkg(sys.argv[1])
+print(f"✅ Extracted {nuget_name} to {extract_folder}")

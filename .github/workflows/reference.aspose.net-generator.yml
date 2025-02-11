@@ -45,8 +45,9 @@ jobs:
           # Run detect_updates.py to determine products needing updates
           $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
 
-          # Ensure GitHub Actions can parse JSON output correctly
-          echo "to_process=$(echo $TO_PROCESS | ConvertTo-Json -Compress)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          # Ensure JSON output is correctly formatted
+          $JSON_OUTPUT = $TO_PROCESS | ConvertTo-Json -Compress
+          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
   process-products:
     needs: detect-updates
@@ -77,8 +78,17 @@ jobs:
       - name: Download NuGet Package
         shell: pwsh
         run: |
+          $PACKAGE="${{ matrix.product.nuget }}"
+          $VERSION=$(python scripts/check_versions.py --get-latest-version $PACKAGE)
+          if (-not $VERSION) { Write-Error "Failed to get NuGet version for $PACKAGE"; exit 1 }
+
+          $URL="https://www.nuget.org/api/v2/package/$PACKAGE/$VERSION"
+          $OUTPUT="packages/$PACKAGE.$VERSION.nupkg"
+
           New-Item -ItemType Directory -Path packages -Force
-          dotnet nuget download "${{ matrix.product.nuget }}" --source nuget.org --output-directory packages
+          Invoke-WebRequest -Uri $URL -OutFile $OUTPUT -UseBasicParsing
+
+          if (-not (Test-Path $OUTPUT)) { Write-Error "Failed to download $PACKAGE"; exit 1 }
 
       - name: Extract DLL & XML
         run: python scripts\extract_files.py "${{ matrix.product.nuget }}"
@@ -101,4 +111,6 @@ jobs:
         run: python scripts\postprocessor.py "workspace\api"
 
       - name: Push Processed Content to `aspose.net`
+        env:
+          REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
         run: python scripts\push_to_repo.py "${{ matrix.product.family }}"
