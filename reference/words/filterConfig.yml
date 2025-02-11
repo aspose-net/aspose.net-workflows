@@ -1,0 +1,27 @@
+apiRules:
+  - include:
+      uidRegex: ^Aspose\.Words\.LowCode(\..*)?$  
+  - include:
+      uidRegex: ^Aspose\.Words\.(License|Metered|SaveFormat|Document)$
+  - include:
+      uidRegex: ^Aspose\.Words\.Comparing\.CompareOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.Replacing\.FindReplaceOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.TextWatermarkOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.ImageWatermarkOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.Saving\.(SaveOptions|ImageSaveOptions)$
+  - include:
+      uidRegex: ^Aspose\.Words\.Loading\.LoadOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.Reporting\.ReportBuildOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.MailMerging\.MailMergeCleanupOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.Loading\.LoadOptions\[\]$
+  - include:
+      uidRegex: ^Aspose\.Words\.Document\[\]$
+  - exclude:
+      uidRegex: ^Aspose\.Words\.(?!LowCode(\..*)?$|License$|Metered$|SaveFormat$|Document$|Comparing\.CompareOptions$|Replacing\.FindReplaceOptions$|TextWatermarkOptions$|ImageWatermarkOptions$|Saving\.(SaveOptions$|ImageSaveOptions$)|Loading\.LoadOptions$|Reporting\.ReportBuildOptions$|MailMerging\.MailMergeCleanupOptions$|Loading\.LoadOptions\[\]$|Document\[\]$).+$

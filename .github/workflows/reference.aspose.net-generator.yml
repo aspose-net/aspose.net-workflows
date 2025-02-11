@@ -1,0 +1,78 @@
+name: reference.aspose.net-generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      products:
+        description: "Comma-separated list of products (e.g., Aspose.Words,Aspose.PDF) or 'all'"
+        required: true
+        default: "all"
+  schedule:
+    - cron: "0 0 1 * *" # Runs on the 1st of every month
+
+jobs:
+  detect-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      to_process: ${{ steps.filter.outputs.to_process }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch latest versions from NuGet
+        id: check_versions
+        run: python scripts/check_versions.py
+
+      - name: Filter Products for Processing
+        id: filter
+        run: |
+          PRODUCTS=${{ github.event.inputs.products }}
+          if [[ "$PRODUCTS" == "all" ]]; then
+            PRODUCTS=$(jq -r 'keys | join(",")' reference/status.json)
+          fi
+
+          # Determine products needing updates
+          TO_PROCESS=$(python scripts/detect_updates.py "$PRODUCTS")
+          echo "to_process=$TO_PROCESS" >> $GITHUB_OUTPUT
+
+  process-products:
+    needs: detect-updates
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        product: ${{ fromJson(needs.detect-updates.outputs.to_process) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET SDK 8.0
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Download NuGet Package
+        run: |
+          dotnet nuget download ${{ matrix.product.nuget }} -Source nuget.org -OutputDirectory packages
+
+      - name: Extract DLL & XML
+        run: python scripts/extract_files.py "${{ matrix.product.nuget }}"
+
+      - name: Generate docfx.json
+        run: python scripts/generate_docfx.py "${{ matrix.product.nuget }}"
+
+      - name: Download and Run DocFX
+        run: |
+          curl -L -o docfx.zip https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip
+          tar -xf docfx.zip -C docfx/
+          docfx/docfx metadata
+
+      - name: Run Post-Processor
+        run: python scripts/postprocessor.py "api"
+
+      - name: Push Processed Content to `aspose.net`
+        run: python scripts/push_to_repo.py "${{ matrix.product.family }}"

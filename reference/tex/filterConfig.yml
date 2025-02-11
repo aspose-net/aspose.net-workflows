@@ -1,0 +1,11 @@
+apiRules:
+  - include:
+      uidRegex: ^Aspose\.TeX\.Plugins(\..*)?$
+  - include:
+      uidRegex: ^Aspose\.TeX\.Features(\..*)?$
+  - include:
+      uidRegex: ^Aspose\.TeX\.(License|Metered)$
+  - exclude:
+      uidRegex: ^Aspose\.TeX\.(?!License$|Metered$).+$
+  - exclude:
+      uidRegex: ^Aspose\.TeX\.(IO|Presentation|CommandLine|ResourceProviders).*$
