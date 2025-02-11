@@ -11,13 +11,13 @@ products_to_check = sys.argv[1].split(",")
 with open("reference/status.json", "r", encoding="utf-8") as f:
     status_data = json.load(f)
 
-updates_needed = {
-    product: status_data[product]
+updates_needed = [
+    {"family": product, "nuget": status_data[product]["nuget"]}
     for product in products_to_check if product in status_data
-}
+]
 
-# Print JSON output for debugging
+# Print JSON for debugging
 print("Products to process:", json.dumps(updates_needed, indent=2))
 
-# Output JSON so GitHub Actions can parse it
-print(json.dumps(list(updates_needed.keys())))
+# Output a valid JSON array for GitHub Actions
+print(json.dumps(updates_needed))
