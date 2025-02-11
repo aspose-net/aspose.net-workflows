@@ -46,7 +46,8 @@ jobs:
           $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
 
           # Ensure GitHub Actions can parse JSON output correctly
-          echo "to_process=$(echo $TO_PROCESS | ConvertTo-Json -Compress)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          $JSON_OUTPUT = $TO_PROCESS | ConvertTo-Json -Compress
+          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
   process-products:
     needs: detect-updates
@@ -78,7 +79,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path packages -Force
-          dotnet nuget download "${{ matrix.product.nuget }}" --source nuget.org --output-directory packages
+          nuget install "${{ matrix.product.nuget }}" -Source nuget.org -OutputDirectory packages -ExcludeVersion
 
       - name: Extract DLL & XML
         run: python scripts\extract_files.py "${{ matrix.product.nuget }}"
