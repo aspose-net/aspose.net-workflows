@@ -21,16 +21,20 @@ seen = set()
 
 for product in products_to_check:
     if product in status_data and product not in seen:
-        updates_needed.append({"family": product, "nuget": status_data[product]["nuget"], "version": status_data[product]["version"]})
+        updates_needed.append({
+            "family": product,
+            "nuget": status_data[product]["nuget"],
+            "version": status_data[product]["version"]
+        })
         seen.add(product)
 
 # Ensure unique entries
 unique_updates_needed = list({u["family"]: u for u in updates_needed}.values())
 
-# Output JSON for GitHub Actions
-formatted_json = json.dumps(unique_updates_needed)
+# ✅ Always print valid JSON
+output_json = json.dumps(unique_updates_needed)
 
 if not unique_updates_needed:
-    print("[]")  # Ensure empty list output for GitHub Actions
+    print("[]")  # Ensure JSON array, not empty output
 else:
-    print(formatted_json)
+    print(output_json)
