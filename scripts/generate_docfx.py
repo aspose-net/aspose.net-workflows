@@ -47,7 +47,6 @@ def download_and_extract_docfx():
         print("ERROR: DocFX zip file is corrupted.")
         sys.exit(1)
 
-    # Clean up zip file
     os.remove(zip_path)
 
 def generate_docfx(nuget_name):
@@ -63,6 +62,13 @@ def generate_docfx(nuget_name):
 
     # Ensure docfx workspace directory exists
     os.makedirs(DOCFX_OUTPUT_DIR, exist_ok=True)
+
+    api_dir = os.path.join(DOCFX_OUTPUT_DIR, "api")
+
+    # Check if API already exists, prevent redundant processing
+    if os.path.exists(api_dir) and len(os.listdir(api_dir)) > 0:
+        print(f"Skipping DocFX processing: API directory already exists at {api_dir}")
+        return
 
     with open(files_txt, "r") as f:
         paths = [line.strip() for line in f.readlines()]
@@ -121,7 +127,6 @@ def generate_docfx(nuget_name):
         sys.exit(1)
 
     # Step 4: Ensure the `api/` directory was created
-    api_dir = os.path.join(DOCFX_OUTPUT_DIR, "api")
     if not os.path.exists(api_dir):
         print("ERROR: DocFX did not generate the 'api/' directory.")
         sys.exit(1)
