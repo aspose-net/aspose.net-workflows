@@ -91,7 +91,7 @@ jobs:
           }
       - name: Install Python Dependencies
         run: python -m pip install requests beautifulsoup4
-        
+
       - name: Read updates.json and Process Families
         shell: pwsh
         run: |
@@ -100,8 +100,12 @@ jobs:
               Write-Host "No updates to process."
               exit 1
           }
+
           foreach ($family in $UPDATES) {
               Write-Host "Processing: $($family.family)"
+              
+              # Export the FAMILY variable for later steps
+              echo "FAMILY=$($family.family)" >> $env:GITHUB_ENV
 
               # Run processing only if the API directory doesn't already exist
               if (-Not (Test-Path "workspace/docfx/api")) {
@@ -112,8 +116,10 @@ jobs:
                   python scripts/postprocessor.py "api"
                   if ($LASTEXITCODE -ne 0) { exit 1 }
               }
-
-              python scripts/push_to_repo.py "$($family.family)"
-              if ($LASTEXITCODE -ne 0) { exit 1 }
           }
 
+      - name: Run push_to_repo.py
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAMILY: ${{ env.FAMILY }}  # Pass the populated FAMILY value
+        run: python scripts/push_to_repo.py "$FAMILY"
