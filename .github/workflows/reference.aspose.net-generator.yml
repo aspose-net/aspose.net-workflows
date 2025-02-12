@@ -53,25 +53,29 @@ jobs:
           Write-Host "$TO_PROCESS"
 
           # Ensure JSON output is correctly formatted before passing to GitHub Actions
-          if ($TO_PROCESS -match "^\[.*\]$") {
-            Write-Host "DEBUG: JSON is valid."
-            $JSON_OUTPUT = $TO_PROCESS
-          } else {
-            Write-Host "DEBUG: JSON is NOT valid. Fixing..."
-            $JSON_OUTPUT = "[" + $TO_PROCESS + "]"
+          try {
+              $parsedJson = ConvertFrom-Json $TO_PROCESS
+              if ($parsedJson.Count -gt 0) {
+                  $JSON_OUTPUT = $TO_PROCESS
+                  Write-Host "DEBUG: JSON is valid."
+              } else {
+                  Write-Host "DEBUG: JSON is empty."
+                  $JSON_OUTPUT = "[]"
+              }
+          } catch {
+              Write-Host "DEBUG: JSON is NOT valid."
+              $JSON_OUTPUT = "[]"
           }
 
-          Write-Host "DEBUG: JSON Output Before GitHub Actions Formatting:"
+          Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
           Write-Host "$JSON_OUTPUT"
 
-          # Fix: Use GITHUB_ENV correctly
-          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-          Write-Host "DEBUG: Final value stored in GITHUB_ENV:"
-          Write-Host "$JSON_OUTPUT"
+          # Correctly set output in GitHub Actions
+          echo "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
 
   process-products:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
     runs-on: windows-latest
 
     steps:

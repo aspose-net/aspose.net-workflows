@@ -7,11 +7,15 @@ if len(sys.argv) < 2:
 
 products_to_check = [p.strip() for p in sys.argv[1].split(",") if p.strip()]
 
-# Load updates needed from status.json
-with open("reference/status.json", "r", encoding="utf-8") as f:
-    status_data = json.load(f)
+# Load updates from status.json
+try:
+    with open("reference/status.json", "r", encoding="utf-8") as f:
+        status_data = json.load(f)
+except FileNotFoundError:
+    print("Error: status.json not found.")
+    sys.exit(1)
 
-# Filter only selected families and prevent duplicates
+# Filter products needing updates
 updates_needed = []
 seen = set()
 
@@ -20,14 +24,9 @@ for product in products_to_check:
         updates_needed.append({"family": product, "nuget": status_data[product]["nuget"]})
         seen.add(product)
 
-# Ensure no duplicates
+# Ensure unique entries
 unique_updates_needed = list({u["family"]: u for u in updates_needed}.values())
 
-# **New: Log full JSON output for debugging**
-print("\nDEBUG: Raw `to_process` JSON Output Before Formatting:\n", json.dumps(unique_updates_needed, indent=2))
-
-# Output a **valid JSON array** for GitHub Actions
+# Output JSON for GitHub Actions
 formatted_json = json.dumps(unique_updates_needed)
-print("\nDEBUG: Final JSON Output Passed to GitHub Actions:\n", formatted_json)
-
-print(formatted_json)  # Ensure GitHub Actions captures it
+print(formatted_json)  # Ensure only a single JSON output
