@@ -1,39 +1,45 @@
 import os
-import glob
-import zipfile
 import sys
+import requests
+import zipfile
 
-if len(sys.argv) < 2:
+if len(sys.argv) < 3:
     print("Error: No NuGet package specified.")
     sys.exit(1)
 
 nuget_name = sys.argv[1]
-package_files = glob.glob(f"packages/{nuget_name}.*.nupkg")
+nuget_version = sys.argv[2]
 
-if not package_files:
-    print(f"Error: No NuGet package found for {nuget_name}.")
-    sys.exit(1)
+download_url = f"https://www.nuget.org/api/v2/package/{nuget_name}/{nuget_version}"
+nupkg_path = f"packages/{nuget_name}.{nuget_version}.nupkg"
 
-package_path = package_files[0]
-zip_path = package_path.replace(".nupkg", ".zip")
+# Ensure packages directory exists
+os.makedirs("packages", exist_ok=True)
 
+# Download NuGet package
 try:
-    os.rename(package_path, zip_path)
-except OSError as e:
-    print(f"Error renaming package: {e}")
+    response = requests.get(download_url, stream=True)
+    response.raise_for_status()
+    with open(nupkg_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print(f"Downloaded: {nupkg_path}")
+except requests.RequestException as e:
+    print(f"Error downloading NuGet package: {e}")
     sys.exit(1)
 
 extract_folder = f"workspace/{nuget_name}"
 os.makedirs(extract_folder, exist_ok=True)
 
 try:
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+    with zipfile.ZipFile(nupkg_path, "r") as zip_ref:
         zip_ref.extractall(extract_folder)
+    print(f"Extraction complete: {nuget_name} -> {extract_folder}")
 except zipfile.BadZipFile:
-    print(f"Error: Corrupt or invalid zip file {zip_path}.")
+    print(f"Error: Corrupt or invalid zip file {nupkg_path}.")
     sys.exit(1)
 
-# Validate that DLL and XML exist
+# Validate DLL and XML existence
 dll_path = os.path.join(extract_folder, f"{nuget_name}.dll")
 xml_path = os.path.join(extract_folder, f"{nuget_name}.xml")
 
