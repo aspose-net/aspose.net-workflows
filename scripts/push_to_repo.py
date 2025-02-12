@@ -13,10 +13,12 @@ if not GITHUB_TOKEN:
     print("Error: GitHub token not set. Skipping repository push.")
     sys.exit(1)
 
-repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
+# ✅ FIX: Use GitHub token for authentication in the HTTPS URL
+repo_url = f"https://x-access-token:{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
+
 DEST_PATH = f"{REPO_NAME}/content/reference/{FOLDER_NAME}/en/"
 
-# Clone repository
+# Clone repository with authentication
 try:
     print(f"Cloning repository {REPO_NAME} from {repo_url}...")
     subprocess.run(["git", "clone", repo_url], check=True)
@@ -31,19 +33,27 @@ os.makedirs(DEST_PATH, exist_ok=True)
 print(f"Copying updated API files to {DEST_PATH}...")
 subprocess.run(["cp", "-r", "workspace/docfx/api/", DEST_PATH], check=True)
 
-# Commit & push changes
+# Change directory to cloned repo
 os.chdir(REPO_NAME)
 
 try:
+    # Configure Git user
+    subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
+    subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
+
+    # Create a new branch
     subprocess.run(["git", "checkout", "-b", BRANCH_NAME], check=True)
-    subprocess.run(["git", "add", "content/reference"], check=True)
-    
+
+    # Stage only updated markdown files
+    subprocess.run(["git", "add", f"content/reference/{FOLDER_NAME}/en/"], check=True)
+
+    # Check if there are any changes
     commit_status = subprocess.run(["git", "diff", "--cached", "--exit-code"], check=False)
     if commit_status.returncode != 0:
         subprocess.run(["git", "commit", "-m", f"Update API reference for {FOLDER_NAME}"], check=True)
         subprocess.run(["git", "push", "--set-upstream", "origin", BRANCH_NAME], check=True)
 
-        # Create a pull request
+        # Create a pull request using GitHub CLI
         print("Creating a pull request...")
         subprocess.run([
             "gh", "pr", "create",
