@@ -45,8 +45,15 @@ jobs:
           # Run detect_updates.py to determine products needing updates
           $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
 
-          # Ensure JSON output is correctly formatted
-          $JSON_OUTPUT = $TO_PROCESS | ConvertTo-Json -Compress
+          # **New: Log the full output JSON for debugging**
+          echo "🔎 DEBUG: Raw JSON Output Before Formatting:"
+          echo $TO_PROCESS
+
+          # **Ensure JSON output is correctly formatted**
+          $JSON_OUTPUT = ConvertTo-Json -Compress -InputObject ($TO_PROCESS | ConvertFrom-Json)
+          echo "✅ DEBUG: Final JSON Output Passed to process-products:"
+          echo $JSON_OUTPUT
+
           echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
   process-products:
