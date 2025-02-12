@@ -13,14 +13,15 @@ if len(sys.argv) < 2:
 
 family_name = sys.argv[1]  # Pass family name (e.g., "Aspose.Words")
 version = sys.argv[2]  # Pass version number (e.g., "24.12.0")
-folder_path = "api"  # Keep "api" as static directory
+folder_path = "workspace/docfx/api"
+
 
 
 if not os.path.exists(folder_path):
-    print("Warning: The 'api/' directory is missing. Skipping post-processing.")
+    print("Warning: The 'workspace/docfx/api' directory is missing. Skipping post-processing.")
     sys.exit(0)
 
-print("Processing markdown files in api/...")
+print("Processing markdown files in workspace/docfx/api...")
 for filename in os.listdir(folder_path):
     if filename.endswith(".md"):
         filepath = os.path.join(folder_path, filename)
