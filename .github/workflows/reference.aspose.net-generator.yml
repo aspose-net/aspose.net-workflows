@@ -120,6 +120,6 @@ jobs:
 
       - name: Run push_to_repo.py
         env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_TOKEN: ${{ secrets.ASPOSE_PAT }}
           FAMILY: ${{ env.FAMILY }}  # Pass the populated FAMILY value
         run: python scripts/push_to_repo.py "$FAMILY"
