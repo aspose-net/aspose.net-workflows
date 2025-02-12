@@ -10,7 +10,7 @@ REFERENCE_DIR = "reference/"
 WORKSPACE_DIR = "workspace/"
 DOCFX_OUTPUT_DIR = "workspace/docfx/"
 DOCFX_DOWNLOAD_URL = "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip"
-DOCFX_DIR = "docfx/"
+DOCFX_DIR = "workspace/docfx/"
 DOCFX_EXECUTABLE = os.path.join(DOCFX_DIR, "docfx.exe")
 
 DOCFX_TEMPLATE = {
@@ -24,13 +24,13 @@ DOCFX_TEMPLATE = {
 }
 
 def download_and_extract_docfx():
-    """Downloads and extracts DocFX if it's not already available."""
+    """Downloads and extracts DocFX if it's not already available in the workspace."""
     if os.path.exists(DOCFX_EXECUTABLE):
         print(f"DocFX already exists at {DOCFX_EXECUTABLE}")
         return
 
     print(f"Downloading DocFX from {DOCFX_DOWNLOAD_URL}...")
-    zip_path = "docfx.zip"
+    zip_path = os.path.join(WORKSPACE_DIR, "docfx.zip")
     
     try:
         urllib.request.urlretrieve(DOCFX_DOWNLOAD_URL, zip_path)
@@ -51,15 +51,12 @@ def download_and_extract_docfx():
     os.remove(zip_path)
 
 def generate_docfx(nuget_name):
-    """Generates docfx.json and runs docfx metadata processing with detailed logging."""
-    
-    # Ensure DocFX is downloaded and extracted
-    download_and_extract_docfx()
+    """Generates docfx.json, downloads DocFX, and runs metadata processing in the correct order."""
 
     # Normalize family name by removing 'Aspose.' and converting to lowercase
     family_name = nuget_name.replace("Aspose.", "").lower()
 
-    files_txt = f"{WORKSPACE_DIR}{nuget_name}_files.txt"
+    files_txt = os.path.join(WORKSPACE_DIR, f"{nuget_name}_files.txt")
     if not os.path.exists(files_txt):
         print(f"ERROR: DLL path file {files_txt} not found. Run extract_files.py first.")
         sys.exit(1)
@@ -86,7 +83,7 @@ def generate_docfx(nuget_name):
         copied_xml_path = os.path.join(DOCFX_OUTPUT_DIR, os.path.basename(xml_path))
         shutil.copy(xml_path, copied_xml_path)
 
-    # Check if filterConfig.yml exists in /reference/{family_name}/ and copy it
+    # Copy filterConfig.yml if it exists
     filter_config_path = os.path.join(REFERENCE_DIR, family_name, "filterConfig.yml")
     copied_filter_path = None
     if os.path.exists(filter_config_path):
@@ -111,7 +108,10 @@ def generate_docfx(nuget_name):
 
     print(f"Generated docfx.json for {nuget_name}: {json.dumps(docfx, indent=2)}")
 
-    # Run docfx metadata processing
+    # Step 2: Download and extract DocFX (AFTER docfx.json is created)
+    download_and_extract_docfx()
+
+    # Step 3: Run DocFX metadata processing
     try:
         print("Running DocFX metadata...")
         subprocess.run([DOCFX_EXECUTABLE, "metadata"], cwd=DOCFX_OUTPUT_DIR, check=True)
@@ -120,10 +120,21 @@ def generate_docfx(nuget_name):
         print(f"ERROR: DocFX metadata processing failed. {e}")
         sys.exit(1)
 
-    # Ensure the `api/` directory was created
+    # Step 4: Ensure the `api/` directory was created
     api_dir = os.path.join(DOCFX_OUTPUT_DIR, "api")
     if not os.path.exists(api_dir):
         print("ERROR: DocFX did not generate the 'api/' directory.")
+        sys.exit(1)
+
+    print(f"API directory generated at: {api_dir}")
+
+    # Step 5: Run post-processing on the generated `api/` directory
+    try:
+        print("Running postprocessor.py on the generated API documentation...")
+        subprocess.run(["python", "scripts/postprocessor.py", api_dir], check=True)
+        print("Post-processing completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Post-processing failed. {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
