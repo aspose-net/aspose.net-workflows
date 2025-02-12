@@ -1,24 +1,26 @@
 import os
 import subprocess
 import sys
+from datetime import datetime
 
 # GitHub repository details
 ORG_NAME = "Aspose"
 REPO_NAME = "aspose.net"
-FOLDER_NAME = sys.argv[1]  # Family name passed as an argument
-BRANCH_NAME = f"api-update-{FOLDER_NAME}-{os.popen('date +%Y%m%d%H%M%S').read().strip()}"
-GITHUB_TOKEN = os.getenv("REPO_TOKEN")
+FOLDER_NAME = sys.argv[1]  # Product family name passed as an argument
 
+# ✅ Fix: Use a valid timestamp format
+timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+BRANCH_NAME = f"api-update-{FOLDER_NAME}-{timestamp}"
+
+GITHUB_TOKEN = os.getenv("REPO_TOKEN")
 if not GITHUB_TOKEN:
     print("Error: GitHub token not set. Skipping repository push.")
     sys.exit(1)
 
-# ✅ FIX: Use GitHub token for authentication in the HTTPS URL
-repo_url = f"https://x-access-token:{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
-
+repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
 DEST_PATH = f"{REPO_NAME}/content/reference/{FOLDER_NAME}/en/"
 
-# Clone repository with authentication
+# Clone repository
 try:
     print(f"Cloning repository {REPO_NAME} from {repo_url}...")
     subprocess.run(["git", "clone", repo_url], check=True)
@@ -41,11 +43,11 @@ try:
     subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
     subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
 
-    # Create a new branch
+    # ✅ Fix: Use the correct branch name format
     subprocess.run(["git", "checkout", "-b", BRANCH_NAME], check=True)
 
     # Stage only updated markdown files
-    subprocess.run(["git", "add", f"content/reference/{FOLDER_NAME}/en/"], check=True)
+    subprocess.run(["git", "add", f"content/reference.aspose.net/{FOLDER_NAME}/en/"], check=True)
 
     # Check if there are any changes
     commit_status = subprocess.run(["git", "diff", "--cached", "--exit-code"], check=False)
