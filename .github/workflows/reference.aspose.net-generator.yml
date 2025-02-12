@@ -13,8 +13,6 @@ on:
 jobs:
   detect-updates:
     runs-on: windows-latest
-    outputs:
-      to_process: ${{ steps.filter.outputs.to_process }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "DEBUG: Received products input: ${{ github.event.inputs.products }}"
-          
+
           $PRODUCTS = "${{ github.event.inputs.products }}"
           if ($PRODUCTS -eq "all") {
               $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
@@ -53,120 +51,64 @@ jobs:
           Write-Host "DEBUG: Raw JSON from detect_updates.py:"
           Write-Host "$TO_PROCESS"
 
-          # Validate JSON output
-          try {
-              $parsedJson = ConvertFrom-Json -InputObject $TO_PROCESS -ErrorAction Stop
-              if ($parsedJson.Count -gt 0) {
-                  $JSON_OUTPUT = $TO_PROCESS
-                  Write-Host "DEBUG: JSON is valid and contains updates."
-              } else {
-                  Write-Host "DEBUG: JSON is empty or no updates are needed."
-                  $JSON_OUTPUT = "[]"
-              }
-          } catch {
-              Write-Host "DEBUG: JSON is NOT valid."
-              Write-Host "DEBUG: Received malformed JSON: $TO_PROCESS"
-              $JSON_OUTPUT = "[]"
+          # Ensure the logs directory exists
+          mkdir logs -Force
+
+          # Store JSON output in logs/updates.json
+          if ($TO_PROCESS -ne "[]" -and $TO_PROCESS -ne "") {
+              Write-Host "Saving updates to logs/updates.json"
+              $TO_PROCESS | Out-File -FilePath logs/updates.json -Encoding utf8
+          } else {
+              Write-Host "No updates found. Creating empty logs/updates.json"
+              "[]" | Out-File -FilePath logs/updates.json -Encoding utf8
           }
+      
+      - name: Commit and Push Updates File
+        shell: pwsh
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add logs/updates.json
+          git commit -m "Update detected families JSON" || echo "No changes to commit"
+          git push
 
-          Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
-          Write-Host "$JSON_OUTPUT"
-
-          # Correctly store output for cross-job usage
-          echo "to_process=$JSON_OUTPUT" >> $GITHUB_OUTPUT
-
-  process-products:
+  process-family:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
     runs-on: windows-latest
 
     steps:
-    - name: Debugging Why `process-products` Is Not Running
-      shell: pwsh
-      run: |
-        $TO_PROCESS = "${{ needs.detect-updates.outputs.to_process }}"
-        Write-Host "DEBUG: Checking received to_process value..."
-        Write-Host "DEBUG: to_process = '$TO_PROCESS'"
-        
-        if ($TO_PROCESS -eq "[]" -or $TO_PROCESS -eq "") {
-            Write-Host "DEBUG: No products to process."
-            exit 1
-        }
-          
-        - name: Checkout Repository
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-        - name: Install .NET SDK 8.0
-          uses: actions/setup-dotnet@v3
-          with:
-            dotnet-version: '8.0.x'
+      - name: Read updates.json and Process Families
+        shell: pwsh
+        run: |
+          if (-Not (Test-Path logs/updates.json)) {
+              Write-Host "No logs/updates.json found. Exiting."
+              exit 1
+          }
 
-        - name: Install Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.x'
+          $UPDATES = Get-Content logs/updates.json -Raw | ConvertFrom-Json
 
-        - name: Install Dependencies
-          run: python -m pip install requests
+          if ($UPDATES.Count -eq 0) {
+              Write-Host "No updates to process."
+              exit 1
+          }
 
-        - name: Download NuGet Package
-          shell: pwsh
-          run: |
-            $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
+          foreach ($family in $UPDATES) {
+              Write-Host "Processing: $($family.family)"
+              
+              # Download and extract package
+              python scripts/extract_files.py "$($family.nuget)" "$($family.version)"
 
-            foreach ($product in $TO_PROCESS) {
-                $PACKAGE_ID = $product.nuget
-                $PACKAGE_VERSION = $product.version
+              # Generate DocFX metadata
+              python scripts/generate_docfx.py "$($family.nuget)"
 
-                Write-Host "Downloading NuGet package: $PACKAGE_ID version $PACKAGE_VERSION"
+              # Run post-processing
+              python scripts/postprocessor.py "api"
 
-                # Download NuGet package from API
-                $NUPKG_URL = "https://www.nuget.org/api/v2/package/$PACKAGE_ID/$PACKAGE_VERSION"
-                Invoke-WebRequest -Uri $NUPKG_URL -OutFile "packages/$PACKAGE_ID.$PACKAGE_VERSION.nupkg"
-
-                # Extract DLL & XML
-                python scripts/extract_files.py "$PACKAGE_ID" "$PACKAGE_VERSION"
-            }
-
-        - name: Generate docfx.json
-          shell: pwsh
-          run: |
-            $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
-
-            foreach ($product in $TO_PROCESS) {
-                python scripts/generate_docfx.py "$($product.nuget)"
-                if (-not (Test-Path "workspace/docfx.json")) {
-                    Write-Host "Error: docfx.json was not generated!"
-                    exit 1
-                }
-            }
-
-        - name: Download and Run DocFX
-          shell: pwsh
-          run: |
-            Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
-            Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
-            docfx/docfx.exe metadata
-            if (-not (Test-Path "api")) {
-                Write-Host "Error: DocFX metadata generation failed!"
-                exit 1
-            }
-
-        - name: Run Post-Processor
-          shell: pwsh
-          run: |
-            python scripts/postprocessor.py "api"
-            if ((Get-ChildItem "api" -Recurse | Measure-Object).Count -eq 0) {
-                Write-Host "Error: No processed files found in 'api'."
-                exit 1
-            }
-
-        - name: Push Processed Content to `aspose.net`
-          shell: pwsh
-          run: |
-            python scripts/push_to_repo.py "${{ matrix.product.family }}"
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "Warning: Push to repository failed!"
-            }
+              # Push content to repository
+              python scripts/push_to_repo.py "$($family.family)"
+          }
