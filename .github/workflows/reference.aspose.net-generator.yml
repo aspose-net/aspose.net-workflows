@@ -41,13 +41,14 @@ jobs:
 
           $PRODUCTS = "${{ github.event.inputs.products }}"
           if ($PRODUCTS -eq "all") {
-            $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
+              $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
           }
 
           Write-Host "DEBUG: Processing products: $PRODUCTS"
 
           # Run detect_updates.py to determine products needing updates
-          $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS"
+          $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS" | Out-String
+          $TO_PROCESS = $TO_PROCESS.Trim()
 
           Write-Host "DEBUG: Raw JSON from detect_updates.py:"
           Write-Host "$TO_PROCESS"
@@ -57,20 +58,21 @@ jobs:
               $parsedJson = ConvertFrom-Json -InputObject $TO_PROCESS -ErrorAction Stop
               if ($parsedJson.Count -gt 0) {
                   $JSON_OUTPUT = $TO_PROCESS
-                  Write-Host "DEBUG: JSON is valid."
+                  Write-Host "DEBUG: JSON is valid and contains updates."
               } else {
-                  Write-Host "DEBUG: JSON is empty."
+                  Write-Host "DEBUG: JSON is empty or no updates are needed."
                   $JSON_OUTPUT = "[]"
               }
           } catch {
               Write-Host "DEBUG: JSON is NOT valid."
+              Write-Host "DEBUG: Received malformed JSON: $TO_PROCESS"
               $JSON_OUTPUT = "[]"
           }
 
           Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
           Write-Host "$JSON_OUTPUT"
 
-          # Correctly store in GitHub Actions environment variable
+          # Ensure correct assignment in GitHub Actions environment variable
           Write-Output "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
 
   process-products:
