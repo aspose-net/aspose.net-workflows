@@ -7,8 +7,8 @@ if len(sys.argv) < 3:
     print("Error: No NuGet package specified.")
     sys.exit(1)
 
-nuget_name = sys.argv[1]
-nuget_version = sys.argv[2]
+nuget_name = sys.argv[1]  # e.g., "Aspose.Words"
+nuget_version = sys.argv[2]  # e.g., "25.2.0"
 
 download_url = f"https://www.nuget.org/api/v2/package/{nuget_name}/{nuget_version}"
 nupkg_path = f"packages/{nuget_name}.{nuget_version}.nupkg"
@@ -39,12 +39,30 @@ except zipfile.BadZipFile:
     print(f"Error: Corrupt or invalid zip file {nupkg_path}.")
     sys.exit(1)
 
-# Validate DLL and XML existence
-dll_path = os.path.join(extract_folder, f"{nuget_name}.dll")
-xml_path = os.path.join(extract_folder, f"{nuget_name}.xml")
+# Search for all XML files matching "{nuget_name}.xml" and find the largest one
+largest_xml_path = None
+largest_xml_size = -1
+selected_dll_path = None
 
-if not os.path.exists(dll_path):
-    print(f"Error: Extracted DLL missing for {nuget_name}.")
+for root, _, files in os.walk(extract_folder):
+    for file in files:
+        if file.lower() == f"{nuget_name.lower()}.xml":
+            xml_path = os.path.join(root, file)
+            xml_size = os.path.getsize(xml_path)
+            if xml_size > largest_xml_size:
+                largest_xml_size = xml_size
+                largest_xml_path = xml_path
+                selected_dll_path = os.path.join(root, f"{nuget_name}.dll")  # DLL should be in same folder
+
+# Ensure valid DLL and XML paths
+if not largest_xml_path or not os.path.exists(selected_dll_path):
+    print(f"Error: Could not find valid DLL and XML files for {nuget_name}.")
     sys.exit(1)
-if not os.path.exists(xml_path):
-    print(f"Warning: Extracted XML missing for {nuget_name}, documentation might be incomplete.")
+
+# Save the correct paths to a text file for later processing in generate_docfx.py
+with open(f"workspace/{nuget_name}_files.txt", "w") as f:
+    f.write(f"{selected_dll_path}\n")
+    f.write(f"{largest_xml_path}\n")
+
+print(f"Selected DLL: {selected_dll_path}")
+print(f"Selected XML (largest): {largest_xml_path}")

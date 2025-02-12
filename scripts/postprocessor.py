@@ -13,6 +13,16 @@ if len(sys.argv) < 2:
 
 folder_path = sys.argv[1]
 
+if not os.path.exists(folder_path):
+    print("Warning: The 'api/' directory is missing. Skipping post-processing.")
+    sys.exit(0)
+
+print("Processing markdown files in api/...")
+for filename in os.listdir(folder_path):
+    if filename.endswith(".md"):
+        filepath = os.path.join(folder_path, filename)
+        print(f"Processing {filepath}...")
+
 def process_internal_links(content):
     """Process internal links to make them start with '/', convert to lowercase, and remove .md extension."""
     try:

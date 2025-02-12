@@ -9,8 +9,8 @@ BRANCH_NAME = f"api-update-{FOLDER_NAME}"
 GITHUB_TOKEN = os.getenv("REPO_TOKEN")
 
 if not GITHUB_TOKEN:
-    print("Error: GitHub token not set. Skipping repository push.")
-    sys.exit(1)
+    print("Warning: GitHub token not set. Skipping repository push.")
+    sys.exit(0)
 
 repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
 
