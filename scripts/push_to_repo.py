@@ -3,16 +3,49 @@ import subprocess
 import sys
 from datetime import datetime
 
-# GitHub repository details
-ORG_NAME = "Aspose"
-REPO_NAME = "aspose.net"
+# Mapping of FAMILY names to corresponding FOLDER_NAME
+FOLDER_MAP = {
+    "Aspose.Words": "words",
+    "Aspose.Cells": "cells",
+    "Aspose.PDF": "pdf",
+    "Aspose.Slides": "slides",
+    "Aspose.Email": "email",
+    "Aspose.Imaging": "imaging",
+    "Aspose.BarCode": "barcode",
+    "Aspose.Tasks": "tasks",
+    "Aspose.Diagram": "diagram",
+    "Aspose.OCR": "ocr",
+    "Aspose.CAD": "cad",
+    "Aspose.Note": "note",
+    "Aspose.Page": "page",
+    "Aspose.Zip": "zip",
+    "Aspose.Font": "font",
+    "Aspose.3D": "3d",
+    "Aspose.TeX": "tex",
+    "Aspose.HTML": "html",
+    "Aspose.PSD": "psd",
+    "Aspose.GIS": "gis",
+    "Aspose.PUB": "pub",
+    "Aspose.SVG": "svg",
+    "Aspose.Finance": "finance",
+    "Aspose.OMR": "omr"
+}
 
-# ✅ Fix: Improved handling of missing `FOLDER_NAME`
+# ✅ Fix: Ensure argument is received
 if len(sys.argv) < 2 or not sys.argv[1].strip():
-    print("ERROR: FOLDER_NAME argument is missing or empty. Ensure it is passed correctly in the workflow.")
+    print("ERROR: FAMILY argument is missing or empty. Ensure it is passed correctly in the workflow.")
     sys.exit(1)
 
-FOLDER_NAME = sys.argv[1].strip()
+FAMILY = sys.argv[1].strip()
+FOLDER_NAME = FOLDER_MAP.get(FAMILY, "").strip()
+
+# ✅ Fix: Validate mapped folder name
+if not FOLDER_NAME:
+    print(f"ERROR: No folder mapping found for FAMILY '{FAMILY}'. Check the mapping dictionary.")
+    sys.exit(1)
+
+print(f"DEBUG: Mapping FAMILY '{FAMILY}' to folder '{FOLDER_NAME}'.")
+
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 BRANCH_NAME = f"api-update-{FOLDER_NAME}-{timestamp}"
 
@@ -21,27 +54,30 @@ if not GITHUB_TOKEN:
     print("ERROR: GitHub token not set. Skipping repository push.")
     sys.exit(1)
 
-repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
-DEST_PATH = f"{REPO_NAME}/content/reference.aspose.net/{FOLDER_NAME}/en/"
+repo_url = f"https://{GITHUB_TOKEN}@github.com/Aspose/aspose.net.git"
+DEST_PATH = f"aspose.net/content/reference.aspose.net/{FOLDER_NAME}/en/"
 
-# ✅ Debugging: Print received `FOLDER_NAME`
-print(f"DEBUG: Processing family -> {FOLDER_NAME}")
+print(f"DEBUG: Cloning repository to update API reference for '{FOLDER_NAME}'.")
 
 # Clone repository
 try:
-    print(f"Cloning repository {REPO_NAME} from {repo_url}...")
     subprocess.run(["git", "clone", repo_url], check=True)
 except subprocess.CalledProcessError:
-    print("Error: Failed to clone repository.")
+    print("ERROR: Failed to clone repository.")
     sys.exit(1)
 
-# ✅ Fix: Copy only the contents of `api/`, not the `api/` folder itself
-print(f"Copying updated API files to {DEST_PATH}...")
+# ✅ Fix: Create the destination path if it does not exist
+print(f"DEBUG: Copying updated API files to '{DEST_PATH}'...")
 os.makedirs(DEST_PATH, exist_ok=True)
-subprocess.run(["cp", "-r", "workspace/docfx/api/.", DEST_PATH], check=True)
+
+try:
+    subprocess.run(["cp", "-r", "workspace/docfx/api/.", DEST_PATH], check=True)
+except subprocess.CalledProcessError:
+    print("ERROR: Failed to copy API files.")
+    sys.exit(1)
 
 # Change directory to cloned repo
-os.chdir(REPO_NAME)
+os.chdir("aspose.net")
 
 try:
     # Configure Git user
@@ -61,16 +97,16 @@ try:
         subprocess.run(["git", "push", "--set-upstream", "origin", BRANCH_NAME], check=True)
 
         # ✅ Fix: Authenticate GitHub CLI before creating PR
-        print("Authenticating GitHub CLI...")
+        print("DEBUG: Authenticating GitHub CLI...")
         auth_check = subprocess.run(["gh", "auth", "status"], check=False)
         if auth_check.returncode != 0:
             print("WARNING: GitHub CLI is not authenticated. PR creation may fail.")
 
         # ✅ Fix: Ensure valid PR title & body
-        print("Creating a pull request...")
+        print("DEBUG: Creating a pull request...")
         pr_result = subprocess.run([
             "gh", "pr", "create",
-            "--repo", f"{ORG_NAME}/{REPO_NAME}",
+            "--repo", "Aspose/aspose.net",
             "--title", f"Update API Docs for {FOLDER_NAME}",
             "--body", f"This PR updates the API documentation for {FOLDER_NAME}.",
             "--base", "main",
@@ -83,10 +119,10 @@ try:
             print("WARNING: PR creation failed. Check GitHub CLI authentication.")
 
     else:
-        print("No changes detected. Skipping commit and push.")
+        print("DEBUG: No changes detected. Skipping commit and push.")
 
 except subprocess.CalledProcessError as e:
-    print(f"Error during Git operations: {e}")
+    print(f"ERROR: Git operations failed: {e}")
     sys.exit(1)
 
-print(f"API reference for {FOLDER_NAME} pushed successfully.")
+print(f"DEBUG: API reference for '{FOLDER_NAME}' pushed successfully.")
