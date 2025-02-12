@@ -3,11 +3,15 @@ import sys
 import os
 import shutil
 import subprocess
+import zipfile
+import urllib.request
 
 REFERENCE_DIR = "reference/"
 WORKSPACE_DIR = "workspace/"
 DOCFX_OUTPUT_DIR = "workspace/docfx/"
-DOCFX_EXECUTABLE = "C:\\path-to\\docfx.exe"  # Update with the correct DocFX path
+DOCFX_DOWNLOAD_URL = "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip"
+DOCFX_DIR = "docfx/"
+DOCFX_EXECUTABLE = os.path.join(DOCFX_DIR, "docfx.exe")
 
 DOCFX_TEMPLATE = {
     "metadata": [
@@ -19,15 +23,45 @@ DOCFX_TEMPLATE = {
     ]
 }
 
-def generate_docfx(nuget_name):
-    """Generates docfx.json and runs docfx metadata processing."""
+def download_and_extract_docfx():
+    """Downloads and extracts DocFX if it's not already available."""
+    if os.path.exists(DOCFX_EXECUTABLE):
+        print(f"✅ DocFX already exists at {DOCFX_EXECUTABLE}")
+        return
+
+    print(f"⬇️ Downloading DocFX from {DOCFX_DOWNLOAD_URL}...")
+    zip_path = "docfx.zip"
     
+    try:
+        urllib.request.urlretrieve(DOCFX_DOWNLOAD_URL, zip_path)
+        print("✅ DocFX download complete.")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to download DocFX: {e}")
+        sys.exit(1)
+
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(DOCFX_DIR)
+        print("✅ DocFX extracted successfully.")
+    except zipfile.BadZipFile:
+        print("❌ ERROR: DocFX zip file is corrupted.")
+        sys.exit(1)
+
+    # Clean up zip file
+    os.remove(zip_path)
+
+def generate_docfx(nuget_name):
+    """Generates docfx.json and runs docfx metadata processing with detailed logging."""
+    
+    # Ensure DocFX is downloaded and extracted
+    download_and_extract_docfx()
+
     # Normalize family name by removing 'Aspose.' and converting to lowercase
     family_name = nuget_name.replace("Aspose.", "").lower()
 
     files_txt = f"{WORKSPACE_DIR}{nuget_name}_files.txt"
     if not os.path.exists(files_txt):
-        print(f"Error: DLL path file {files_txt} not found. Run extract_files.py first.")
+        print(f"❌ ERROR: DLL path file {files_txt} not found. Run extract_files.py first.")
         sys.exit(1)
 
     # Ensure docfx workspace directory exists
@@ -40,7 +74,7 @@ def generate_docfx(nuget_name):
     xml_path = paths[1] if len(paths) > 1 else None
 
     if not dll_path or not os.path.exists(dll_path):
-        print(f"Error: DLL file not found for {nuget_name}.")
+        print(f"❌ ERROR: DLL file not found for {nuget_name}.")
         sys.exit(1)
 
     # Copy DLL and XML to docfx output directory
@@ -58,7 +92,7 @@ def generate_docfx(nuget_name):
     if os.path.exists(filter_config_path):
         copied_filter_path = os.path.join(DOCFX_OUTPUT_DIR, "filterConfig.yml")
         shutil.copy(filter_config_path, copied_filter_path)
-        print(f"DEBUG: Copied filterConfig.yml for {nuget_name}.")
+        print(f"✅ Copied filterConfig.yml for {nuget_name}.")
 
     # Prepare docfx.json content
     docfx = DOCFX_TEMPLATE.copy()
@@ -75,15 +109,21 @@ def generate_docfx(nuget_name):
     with open(docfx_json_path, "w", encoding="utf-8") as f:
         json.dump(docfx, f, indent=2)
 
-    print(f"Generated docfx.json for {nuget_name}: {json.dumps(docfx, indent=2)}")
+    print(f"✅ Generated docfx.json for {nuget_name}: {json.dumps(docfx, indent=2)}")
 
     # Run docfx metadata processing
     try:
-        print("Running docfx.exe metadata...")
+        print("🚀 Running DocFX metadata...")
         subprocess.run([DOCFX_EXECUTABLE, "metadata"], cwd=DOCFX_OUTPUT_DIR, check=True)
-        print("DocFX metadata processing completed successfully.")
+        print("✅ DocFX metadata processing completed successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"Error: DocFX metadata processing failed. {e}")
+        print(f"❌ ERROR: DocFX metadata processing failed. {e}")
+        sys.exit(1)
+
+    # Ensure the `api/` directory was created
+    api_dir = os.path.join(DOCFX_OUTPUT_DIR, "api")
+    if not os.path.exists(api_dir):
+        print("❌ ERROR: DocFX did not generate the 'api/' directory.")
         sys.exit(1)
 
 if __name__ == "__main__":

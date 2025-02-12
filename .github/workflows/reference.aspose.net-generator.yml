@@ -100,29 +100,22 @@ jobs:
 
       - name: Install Python Dependencies
         run: python -m pip install requests beautifulsoup4
-  
       - name: Read updates.json and Process Families
         shell: pwsh
         run: |
           $UPDATES = Get-Content "logs/updates.json" -Raw | ConvertFrom-Json
-
           if ($UPDATES.Count -eq 0) {
               Write-Host "No updates to process."
               exit 1
           }
-
           foreach ($family in $UPDATES) {
               Write-Host "Processing: $($family.family)"
-
-              # Download and extract package
               python scripts/extract_files.py "$($family.nuget)" "$($family.version)"
-
-              # Generate DocFX metadata
+              if ($LASTEXITCODE -ne 0) { exit 1 }
               python scripts/generate_docfx.py "$($family.nuget)"
-
-              # Run post-processing
+              if ($LASTEXITCODE -ne 0) { exit 1 }
               python scripts/postprocessor.py "api"
-
-              # Push content to repository
+              if ($LASTEXITCODE -ne 0) { exit 1 }
               python scripts/push_to_repo.py "$($family.family)"
+              if ($LASTEXITCODE -ne 0) { exit 1 }
           }
