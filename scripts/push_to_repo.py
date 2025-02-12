@@ -6,22 +6,26 @@ from datetime import datetime
 # GitHub repository details
 ORG_NAME = "Aspose"
 REPO_NAME = "aspose.net"
-FOLDER_NAME = sys.argv[1].strip()  # Ensure the family name is correctly passed
-if not FOLDER_NAME:
-    print("Error: FOLDER_NAME is empty. Cannot proceed.")
+
+# ✅ Fix: Improved handling of missing `FOLDER_NAME`
+if len(sys.argv) < 2 or not sys.argv[1].strip():
+    print("ERROR: FOLDER_NAME argument is missing or empty. Ensure it is passed correctly in the workflow.")
     sys.exit(1)
 
-# ✅ Fix: Use a valid timestamp format
+FOLDER_NAME = sys.argv[1].strip()
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 BRANCH_NAME = f"api-update-{FOLDER_NAME}-{timestamp}"
 
 GITHUB_TOKEN = os.getenv("REPO_TOKEN")
 if not GITHUB_TOKEN:
-    print("Error: GitHub token not set. Skipping repository push.")
+    print("ERROR: GitHub token not set. Skipping repository push.")
     sys.exit(1)
 
 repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
 DEST_PATH = f"{REPO_NAME}/content/reference.aspose.net/{FOLDER_NAME}/en/"
+
+# ✅ Debugging: Print received `FOLDER_NAME`
+print(f"DEBUG: Processing family -> {FOLDER_NAME}")
 
 # Clone repository
 try:
@@ -31,10 +35,10 @@ except subprocess.CalledProcessError:
     print("Error: Failed to clone repository.")
     sys.exit(1)
 
-# ✅ Fix: Copy only the files inside `api/`, not the folder itself
+# ✅ Fix: Copy only the contents of `api/`, not the `api/` folder itself
 print(f"Copying updated API files to {DEST_PATH}...")
 os.makedirs(DEST_PATH, exist_ok=True)
-subprocess.run(["cp", "-r", "workspace/docfx/api/.", DEST_PATH], check=True)  # Copy files, not the 'api/' folder
+subprocess.run(["cp", "-r", "workspace/docfx/api/.", DEST_PATH], check=True)
 
 # Change directory to cloned repo
 os.chdir(REPO_NAME)
@@ -44,10 +48,10 @@ try:
     subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
     subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
 
-    # ✅ Fix: Ensure correct branch name
+    # Create and checkout the branch
     subprocess.run(["git", "checkout", "-b", BRANCH_NAME], check=True)
 
-    # ✅ Fix: Ensure correct staging path
+    # ✅ Fix: Ensure correct path for staging
     subprocess.run(["git", "add", f"content/reference.aspose.net/{FOLDER_NAME}/en/"], check=True)
 
     # Check if there are any changes
@@ -60,7 +64,7 @@ try:
         print("Authenticating GitHub CLI...")
         auth_check = subprocess.run(["gh", "auth", "status"], check=False)
         if auth_check.returncode != 0:
-            print("Error: GitHub CLI is not authenticated. PR creation may fail.")
+            print("WARNING: GitHub CLI is not authenticated. PR creation may fail.")
 
         # ✅ Fix: Ensure valid PR title & body
         print("Creating a pull request...")
@@ -76,7 +80,7 @@ try:
         if pr_result.returncode == 0:
             print(f"Pull request created for {BRANCH_NAME}.")
         else:
-            print("Warning: PR creation failed. Check GitHub CLI authentication.")
+            print("WARNING: PR creation failed. Check GitHub CLI authentication.")
 
     else:
         print("No changes detected. Skipping commit and push.")
