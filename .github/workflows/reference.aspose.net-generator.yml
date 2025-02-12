@@ -47,21 +47,26 @@ jobs:
 
           # Ensure JSON output is correctly formatted before passing to GitHub Actions
           if ($TO_PROCESS -match "^\[.*\]$") {
-            echo "DEBUG: JSON is valid."
+            Write-Host "DEBUG: JSON is valid."
             $JSON_OUTPUT = $TO_PROCESS
           } else {
-            echo "DEBUG: JSON is NOT valid. Attempting to fix..."
+            Write-Host "DEBUG: JSON is NOT valid. Attempting to fix..."
             $JSON_OUTPUT = "[" + $TO_PROCESS + "]"
           }
 
-          echo "DEBUG: JSON Output Before GitHub Actions Formatting:"
-          echo $JSON_OUTPUT
+          Write-Host "DEBUG: JSON Output Before GitHub Actions Formatting:"
+          Write-Host $JSON_OUTPUT
 
-          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          # **New: Properly format JSON to escape special characters**
+          $JSON_OUTPUT = $JSON_OUTPUT -replace '"', '\"'
 
+          Write-Host "DEBUG: Final JSON Passed to GitHub Actions:"
+          Write-Host $JSON_OUTPUT
+
+          echo "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
   process-products:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' && needs.detect-updates.outputs.to_process != null }}
     runs-on: windows-latest
     strategy:
       matrix:
