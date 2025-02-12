@@ -24,10 +24,10 @@ for product in products_to_check:
 unique_updates_needed = list({u["family"]: u for u in updates_needed}.values())
 
 # **New: Log full JSON output for debugging**
-print("\n🔎 DEBUG: Raw `to_process` JSON Output Before Formatting:\n", json.dumps(unique_updates_needed, indent=2))
+print("\nDEBUG: Raw `to_process` JSON Output Before Formatting:\n", json.dumps(unique_updates_needed, indent=2))
 
 # Output a **valid JSON array** for GitHub Actions
 formatted_json = json.dumps(unique_updates_needed)
-print("\n✅ DEBUG: Final JSON Output Passed to GitHub Actions:\n", formatted_json)
+print("\nDEBUG: Final JSON Output Passed to GitHub Actions:\n", formatted_json)
 
 print(formatted_json)  # Ensure GitHub Actions captures it
