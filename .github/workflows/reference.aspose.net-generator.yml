@@ -69,12 +69,12 @@ jobs:
           echo $JSON_OUTPUT
 
           # Fix: Use GITHUB_ENV instead of deprecated set-output
-          echo "to_process=$JSON_OUTPUT" >> $GITHUB_ENV
+          echo "::set-output name=to_process::$JSON_OUTPUT
           echo "DEBUG: Final value stored in GITHUB_ENV: $JSON_OUTPUT"
 
   process-products:
     needs: detect-updates
-    if: contains(needs.detect-updates.outputs.to_process, '{')
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
     runs-on: windows-latest
 
     steps:
