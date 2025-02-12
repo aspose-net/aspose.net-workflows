@@ -61,18 +61,13 @@ jobs:
           echo "DEBUG: GitHub Actions should receive `to_process` as:"
           echo $JSON_OUTPUT
 
-          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          # **Fix: Use GitHub Actions Output Correctly**
+          echo "::set-output name=to_process::$JSON_OUTPUT"
 
   process-products:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' && needs.detect-updates.outputs.to_process != null }}
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
     runs-on: windows-latest
-
-    # **DEBUG: Show why `process-products` is not running**
-    steps:
-      - name: Debugging Why `process-products` Is Not Running
-        run: echo "DEBUG: Received `to_process` as '${{ needs.detect-updates.outputs.to_process }}'"
-
     strategy:
       matrix:
         product: ${{ fromJson(needs.detect-updates.outputs.to_process) }}
