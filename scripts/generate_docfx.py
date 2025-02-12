@@ -133,14 +133,6 @@ def generate_docfx(nuget_name):
 
     print(f"API directory generated at: {api_dir}")
 
-    # Step 5: Run post-processing on the generated `api/` directory
-    try:
-        print("Running postprocessor.py on the generated API documentation...")
-        subprocess.run(["python", "scripts/postprocessor.py", api_dir], check=True)
-        print("Post-processing completed successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"ERROR: Post-processing failed. {e}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     generate_docfx(sys.argv[1])
