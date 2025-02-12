@@ -9,7 +9,7 @@ BRANCH_NAME = f"api-update-{FOLDER_NAME}"
 GITHUB_TOKEN = os.getenv("REPO_TOKEN")
 
 if not GITHUB_TOKEN:
-    print("Error: GitHub token not set.")
+    print("Error: GitHub token not set. Skipping repository push.")
     sys.exit(1)
 
 repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
@@ -34,12 +34,4 @@ subprocess.run(["git", "add", "."], check=True)
 subprocess.run(["git", "commit", "-m", f"Update API reference for {FOLDER_NAME}"], check=True)
 subprocess.run(["git", "push", "--set-upstream", "origin", BRANCH_NAME], check=True)
 
-# Create PR
-subprocess.run([
-    "gh", "pr", "create",
-    "--title", f"Update API reference for {FOLDER_NAME}",
-    "--body", "This PR updates the API reference.",
-    "--base", "main"
-], check=True)
-
-print(f"API reference for {FOLDER_NAME} pushed and PR created successfully.")
+print(f"API reference for {FOLDER_NAME} pushed successfully.")
