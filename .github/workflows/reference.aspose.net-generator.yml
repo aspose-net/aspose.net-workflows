@@ -57,20 +57,26 @@ jobs:
           Write-Host "DEBUG: JSON Output Before GitHub Actions Formatting:"
           Write-Host $JSON_OUTPUT
 
-          # **New: Properly format JSON to escape special characters**
-          $JSON_OUTPUT = $JSON_OUTPUT -replace '"', '\"'
+          # Print `to_process` for debugging in GitHub Actions
+          echo "DEBUG: GitHub Actions should receive `to_process` as:"
+          echo $JSON_OUTPUT
 
-          Write-Host "DEBUG: Final JSON Passed to GitHub Actions:"
-          Write-Host $JSON_OUTPUT
+          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
-          echo "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
   process-products:
     needs: detect-updates
     if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' && needs.detect-updates.outputs.to_process != null }}
     runs-on: windows-latest
+
+    # **DEBUG: Show why `process-products` is not running**
+    steps:
+      - name: Debugging Why `process-products` Is Not Running
+        run: echo "DEBUG: Received `to_process` as '${{ needs.detect-updates.outputs.to_process }}'"
+
     strategy:
       matrix:
         product: ${{ fromJson(needs.detect-updates.outputs.to_process) }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
