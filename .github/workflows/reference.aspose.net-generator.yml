@@ -134,11 +134,6 @@ jobs:
           git commit -m "Update processed status for ${{ matrix.family.family }}" || echo "No changes to commit"
           git push || echo "No changes to push"
   
-      - name: Run push_to_repo.py
-        env:
-          REPO_TOKEN: ${{ secrets.ASPOSE_PAT }}
-        run: python scripts/push_to_repo.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
-
       - name: Commit Status Update
         shell: pwsh
         run: |
