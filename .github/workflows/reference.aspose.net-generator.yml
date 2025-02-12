@@ -78,7 +78,7 @@ jobs:
       - name: Download NuGet Package
         shell: pwsh
         run: |
-          $PACKAGE="${{ matrix.product.nuget }}"
+          $PACKAGE="${{ matrix.product.family }}"
           $VERSION=$(python scripts/check_versions.py --get-latest-version $PACKAGE)
           if (-not $VERSION) { Write-Error "Failed to get NuGet version for $PACKAGE"; exit 1 }
 
@@ -91,10 +91,10 @@ jobs:
           if (-not (Test-Path $OUTPUT)) { Write-Error "Failed to download $PACKAGE"; exit 1 }
 
       - name: Extract DLL & XML
-        run: python scripts\extract_files.py "${{ matrix.product.nuget }}"
+        run: python scripts\extract_files.py "${{ matrix.product.family }}"
 
       - name: Generate docfx.json
-        run: python scripts\generate_docfx.py "${{ matrix.product.nuget }}"
+        run: python scripts\generate_docfx.py "${{ matrix.product.family }}"
 
       - name: Download and Extract DocFX
         shell: pwsh
