@@ -107,7 +107,7 @@ jobs:
           echo "FAMILY=${{ matrix.family.family }}" >> $env:GITHUB_ENV
 
           if (-Not (Test-Path "workspace/docfx/api")) {
-              python scripts/extract_files.py "${{ matrix.family.nuget }}" "${{ matrix.family.version }}"
+              python scripts/extract_files.py "${{ matrix.family.nuget }}" "${{ matrix.family.version }}" "${{ matrix.family.family }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
               python scripts/generate_docfx.py "${{ matrix.family.nuget }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
