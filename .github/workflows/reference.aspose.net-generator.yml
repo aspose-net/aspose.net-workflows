@@ -77,20 +77,31 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository (Ensure Latest State)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Read updates.json and Process Families
+      - name: Ensure `logs/updates.json` Exists
         shell: pwsh
         run: |
-          if (-Not (Test-Path logs/updates.json)) {
+          # Force a pull to get the latest file changes
+          git fetch --all
+          git reset --hard origin/main
+          git pull
+
+          # Verify file existence
+          if (-Not (Test-Path "logs/updates.json")) {
               Write-Host "No logs/updates.json found. Exiting."
               exit 1
           }
 
-          $UPDATES = Get-Content logs/updates.json -Raw | ConvertFrom-Json
+          Write-Host "logs/updates.json exists! Proceeding to read contents."
+
+      - name: Read updates.json and Process Families
+        shell: pwsh
+        run: |
+          $UPDATES = Get-Content "logs/updates.json" -Raw | ConvertFrom-Json
 
           if ($UPDATES.Count -eq 0) {
               Write-Host "No updates to process."
@@ -99,7 +110,7 @@ jobs:
 
           foreach ($family in $UPDATES) {
               Write-Host "Processing: $($family.family)"
-              
+
               # Download and extract package
               python scripts/extract_files.py "$($family.nuget)" "$($family.version)"
 
