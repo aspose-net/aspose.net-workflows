@@ -89,7 +89,9 @@ jobs:
               Write-Host "No logs/updates.json found. Exiting."
               exit 1
           }
-
+      - name: Install Python Dependencies
+        run: python -m pip install requests beautifulsoup4
+        
       - name: Read updates.json and Process Families
         shell: pwsh
         run: |
