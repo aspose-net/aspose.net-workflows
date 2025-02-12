@@ -70,8 +70,8 @@ jobs:
           Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
           Write-Host "$JSON_OUTPUT"
 
-          # Correctly store in GitHub Actions
-          echo "to_process=$JSON_OUTPUT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          # Correctly store in GitHub Actions environment variable
+          Write-Output "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
 
   process-products:
     needs: detect-updates
