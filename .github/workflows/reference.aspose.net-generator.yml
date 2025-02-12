@@ -72,20 +72,26 @@ jobs:
           Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
           Write-Host "$JSON_OUTPUT"
 
-          # Ensure correct assignment in GitHub Actions environment variable
-          Write-Output "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
+          # Correctly store output for cross-job usage
+          echo "to_process=$JSON_OUTPUT" >> $GITHUB_OUTPUT
 
   process-products:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
     runs-on: windows-latest
 
     steps:
       - name: Debugging Why `process-products` Is Not Running
         shell: pwsh
         run: |
+          $TO_PROCESS = "${{ needs.detect-updates.outputs.to_process }}"
           Write-Host "DEBUG: Checking received to_process value..."
-          Write-Host "DEBUG: to_process = '${{ needs.detect-updates.outputs.to_process }}'"
+          Write-Host "DEBUG: to_process = '$TO_PROCESS'"
+          
+          if ($TO_PROCESS -eq "[]" -or $TO_PROCESS -eq "") {
+              Write-Host "DEBUG: No products to process."
+              exit 1
+          }
 
       - name: Checkout Repository
         uses: actions/checkout@v4
