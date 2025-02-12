@@ -69,7 +69,7 @@ jobs:
           echo $JSON_OUTPUT
 
           # Fix: Use GITHUB_ENV instead of deprecated set-output
-          echo "::set-output name=to_process::$JSON_OUTPUT
+          echo "to_process=$JSON_OUTPUT" >> $GITHUB_ENV
           echo "DEBUG: Final value stored in GITHUB_ENV: $JSON_OUTPUT"
 
   process-products:
