@@ -18,7 +18,7 @@ if not GITHUB_TOKEN:
     sys.exit(1)
 
 repo_url = f"https://{GITHUB_TOKEN}@github.com/{ORG_NAME}/{REPO_NAME}.git"
-DEST_PATH = f"{REPO_NAME}/content/reference/{FOLDER_NAME}/en/"
+DEST_PATH = f"{REPO_NAME}/content/reference.aspose.net/{FOLDER_NAME}/en/"
 
 # Clone repository
 try:
@@ -31,7 +31,7 @@ except subprocess.CalledProcessError:
 # Ensure the destination path exists
 os.makedirs(DEST_PATH, exist_ok=True)
 
-# Copy API documentation files
+# ✅ Fix: Ensure `FOLDER_NAME` is correctly passed to avoid double slashes (`//`)
 print(f"Copying updated API files to {DEST_PATH}...")
 subprocess.run(["cp", "-r", "workspace/docfx/api/", DEST_PATH], check=True)
 
@@ -46,7 +46,7 @@ try:
     # ✅ Fix: Use the correct branch name format
     subprocess.run(["git", "checkout", "-b", BRANCH_NAME], check=True)
 
-    # Stage only updated markdown files
+    # ✅ Fix: Use the correct `content/reference.aspose.net/{FOLDER_NAME}/en/` path
     subprocess.run(["git", "add", f"content/reference.aspose.net/{FOLDER_NAME}/en/"], check=True)
 
     # Check if there are any changes
