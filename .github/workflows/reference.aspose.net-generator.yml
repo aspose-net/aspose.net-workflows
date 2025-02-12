@@ -38,7 +38,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "DEBUG: Received products input: ${{ github.event.inputs.products }}"
-
+          
           $PRODUCTS = "${{ github.event.inputs.products }}"
           if ($PRODUCTS -eq "all") {
               $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
@@ -81,92 +81,92 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Debugging Why `process-products` Is Not Running
-        shell: pwsh
-        run: |
-          $TO_PROCESS = "${{ needs.detect-updates.outputs.to_process }}"
-          Write-Host "DEBUG: Checking received to_process value..."
-          Write-Host "DEBUG: to_process = '$TO_PROCESS'"
+    - name: Debugging Why `process-products` Is Not Running
+      shell: pwsh
+      run: |
+        $TO_PROCESS = "${{ needs.detect-updates.outputs.to_process }}"
+        Write-Host "DEBUG: Checking received to_process value..."
+        Write-Host "DEBUG: to_process = '$TO_PROCESS'"
+        
+        if ($TO_PROCESS -eq "[]" -or $TO_PROCESS -eq "") {
+            Write-Host "DEBUG: No products to process."
+            exit 1
+        }
           
-          if ($TO_PROCESS -eq "[]" -or $TO_PROCESS -eq "") {
-              Write-Host "DEBUG: No products to process."
-              exit 1
-          }
+        - name: Checkout Repository
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        - name: Install .NET SDK 8.0
+          uses: actions/setup-dotnet@v3
+          with:
+            dotnet-version: '8.0.x'
 
-      - name: Install .NET SDK 8.0
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x'
+        - name: Install Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: '3.x'
 
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
+        - name: Install Dependencies
+          run: python -m pip install requests
 
-      - name: Install Dependencies
-        run: python -m pip install requests
+        - name: Download NuGet Package
+          shell: pwsh
+          run: |
+            $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
 
-      - name: Download NuGet Package
-        shell: pwsh
-        run: |
-          $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
+            foreach ($product in $TO_PROCESS) {
+                $PACKAGE_ID = $product.nuget
+                $PACKAGE_VERSION = $product.version
 
-          foreach ($product in $TO_PROCESS) {
-              $PACKAGE_ID = $product.nuget
-              $PACKAGE_VERSION = $product.version
+                Write-Host "Downloading NuGet package: $PACKAGE_ID version $PACKAGE_VERSION"
 
-              Write-Host "Downloading NuGet package: $PACKAGE_ID version $PACKAGE_VERSION"
+                # Download NuGet package from API
+                $NUPKG_URL = "https://www.nuget.org/api/v2/package/$PACKAGE_ID/$PACKAGE_VERSION"
+                Invoke-WebRequest -Uri $NUPKG_URL -OutFile "packages/$PACKAGE_ID.$PACKAGE_VERSION.nupkg"
 
-              # Download NuGet package from API
-              $NUPKG_URL = "https://www.nuget.org/api/v2/package/$PACKAGE_ID/$PACKAGE_VERSION"
-              Invoke-WebRequest -Uri $NUPKG_URL -OutFile "packages/$PACKAGE_ID.$PACKAGE_VERSION.nupkg"
+                # Extract DLL & XML
+                python scripts/extract_files.py "$PACKAGE_ID" "$PACKAGE_VERSION"
+            }
 
-              # Extract DLL & XML
-              python scripts/extract_files.py "$PACKAGE_ID" "$PACKAGE_VERSION"
-          }
+        - name: Generate docfx.json
+          shell: pwsh
+          run: |
+            $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
 
-      - name: Generate docfx.json
-        shell: pwsh
-        run: |
-          $TO_PROCESS = ConvertFrom-Json "${{ needs.detect-updates.outputs.to_process }}"
+            foreach ($product in $TO_PROCESS) {
+                python scripts/generate_docfx.py "$($product.nuget)"
+                if (-not (Test-Path "workspace/docfx.json")) {
+                    Write-Host "Error: docfx.json was not generated!"
+                    exit 1
+                }
+            }
 
-          foreach ($product in $TO_PROCESS) {
-              python scripts/generate_docfx.py "$($product.nuget)"
-              if (-not (Test-Path "workspace/docfx.json")) {
-                  Write-Host "Error: docfx.json was not generated!"
-                  exit 1
-              }
-          }
+        - name: Download and Run DocFX
+          shell: pwsh
+          run: |
+            Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
+            Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
+            docfx/docfx.exe metadata
+            if (-not (Test-Path "api")) {
+                Write-Host "Error: DocFX metadata generation failed!"
+                exit 1
+            }
 
-      - name: Download and Run DocFX
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
-          Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
-          docfx/docfx.exe metadata
-          if (-not (Test-Path "api")) {
-              Write-Host "Error: DocFX metadata generation failed!"
-              exit 1
-          }
+        - name: Run Post-Processor
+          shell: pwsh
+          run: |
+            python scripts/postprocessor.py "api"
+            if ((Get-ChildItem "api" -Recurse | Measure-Object).Count -eq 0) {
+                Write-Host "Error: No processed files found in 'api'."
+                exit 1
+            }
 
-      - name: Run Post-Processor
-        shell: pwsh
-        run: |
-          python scripts/postprocessor.py "api"
-          if ((Get-ChildItem "api" -Recurse | Measure-Object).Count -eq 0) {
-              Write-Host "Error: No processed files found in 'api'."
-              exit 1
-          }
-
-      - name: Push Processed Content to `aspose.net`
-        shell: pwsh
-        run: |
-          python scripts/push_to_repo.py "${{ matrix.product.family }}"
-          if ($LASTEXITCODE -ne 0) {
-              Write-Host "Warning: Push to repository failed!"
-          }
+        - name: Push Processed Content to `aspose.net`
+          shell: pwsh
+          run: |
+            python scripts/push_to_repo.py "${{ matrix.product.family }}"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Warning: Push to repository failed!"
+            }
