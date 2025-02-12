@@ -52,7 +52,6 @@ jobs:
           Write-Host "DEBUG: Raw JSON from detect_updates.py:"
           Write-Host "$TO_PROCESS"
 
-          # Ensure JSON output is correctly formatted before passing to GitHub Actions
           try {
               $parsedJson = ConvertFrom-Json $TO_PROCESS
               if ($parsedJson.Count -gt 0) {
@@ -70,7 +69,6 @@ jobs:
           Write-Host "DEBUG: Final JSON Output Passed to GitHub Actions:"
           Write-Host "$JSON_OUTPUT"
 
-          # Correctly set output in GitHub Actions
           echo "to_process=$JSON_OUTPUT" >> $env:GITHUB_ENV
 
   process-products:
@@ -80,9 +78,10 @@ jobs:
 
     steps:
       - name: Debugging Why `process-products` Is Not Running
+        shell: pwsh
         run: |
-          echo "DEBUG: Checking received to_process value..."
-          echo "DEBUG: to_process = '${{ needs.detect-updates.outputs.to_process }}'"
+          Write-Host "DEBUG: Checking received to_process value..."
+          Write-Host "DEBUG: to_process = '${{ needs.detect-updates.outputs.to_process }}'"
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -101,3 +100,57 @@ jobs:
 
       - name: Install Dependencies
         run: python -m pip install requests
+
+      - name: Download NuGet Package
+        shell: pwsh
+        run: |
+          dotnet nuget download "${{ matrix.product.nuget }}" -Source nuget.org -OutputDirectory packages
+
+      - name: Extract DLL & XML
+        shell: pwsh
+        run: |
+          python scripts/extract_files.py "${{ matrix.product.nuget }}"
+          if (-not (Test-Path "workspace/${{ matrix.product.nuget }}.dll")) {
+            Write-Host "Error: DLL file missing after extraction!"
+            exit 1
+          }
+          if (-not (Test-Path "workspace/${{ matrix.product.nuget }}.xml")) {
+            Write-Host "Warning: XML file missing, documentation might be incomplete."
+          }
+
+      - name: Generate docfx.json
+        shell: pwsh
+        run: |
+          python scripts/generate_docfx.py "${{ matrix.product.nuget }}"
+          if (-not (Test-Path "workspace/docfx.json")) {
+            Write-Host "Error: docfx.json was not generated!"
+            exit 1
+          }
+
+      - name: Download and Run DocFX
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
+          Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
+          docfx/docfx.exe metadata
+          if (-not (Test-Path "api")) {
+            Write-Host "Error: DocFX metadata generation failed!"
+            exit 1
+          }
+
+      - name: Run Post-Processor
+        shell: pwsh
+        run: |
+          python scripts/postprocessor.py "api"
+          if ((Get-ChildItem "api" -Recurse | Measure-Object).Count -eq 0) {
+            Write-Host "Error: No processed files found in 'api'."
+            exit 1
+          }
+
+      - name: Push Processed Content to `aspose.net`
+        shell: pwsh
+        run: |
+          python scripts/push_to_repo.py "${{ matrix.product.family }}"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Warning: Push to repository failed!"
+          }

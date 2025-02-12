@@ -14,10 +14,9 @@ if not package_files:
     print(f"Error: No NuGet package found for {nuget_name}.")
     sys.exit(1)
 
-package_path = package_files[0]  # Use the first match
+package_path = package_files[0]
 zip_path = package_path.replace(".nupkg", ".zip")
 
-# Rename .nupkg to .zip safely
 try:
     os.rename(package_path, zip_path)
 except OSError as e:
@@ -27,11 +26,19 @@ except OSError as e:
 extract_folder = f"workspace/{nuget_name}"
 os.makedirs(extract_folder, exist_ok=True)
 
-# Extract files
 try:
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(extract_folder)
-    print(f"Extraction complete: {nuget_name} -> {extract_folder}")
 except zipfile.BadZipFile:
     print(f"Error: Corrupt or invalid zip file {zip_path}.")
     sys.exit(1)
+
+# Validate that DLL and XML exist
+dll_path = os.path.join(extract_folder, f"{nuget_name}.dll")
+xml_path = os.path.join(extract_folder, f"{nuget_name}.xml")
+
+if not os.path.exists(dll_path):
+    print(f"Error: Extracted DLL missing for {nuget_name}.")
+    sys.exit(1)
+if not os.path.exists(xml_path):
+    print(f"Warning: Extracted XML missing for {nuget_name}, documentation might be incomplete.")

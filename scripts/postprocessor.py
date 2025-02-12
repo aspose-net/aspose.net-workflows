@@ -41,4 +41,7 @@ def process_files():
                 f.truncate()
 
 if __name__ == "__main__":
+    if not os.path.exists(FOLDER_PATH) or not os.listdir(FOLDER_PATH):
+        print("Error: No markdown files found to process.")
+        sys.exit(1)
     process_files()

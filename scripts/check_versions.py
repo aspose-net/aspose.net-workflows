@@ -6,52 +6,55 @@ STATUS_FILE = "reference/status.json"
 NUGET_API_URL = "https://api.nuget.org/v3-flatcontainer/{}/index.json"
 
 # Load existing status.json
-with open(STATUS_FILE, "r", encoding="utf-8") as f:
-    status_data = json.load(f)
+try:
+    with open(STATUS_FILE, "r", encoding="utf-8") as f:
+        status_data = json.load(f)
+except FileNotFoundError:
+    print("Error: status.json not found.")
+    sys.exit(1)
 
 updates_needed = {}
+modified = False  # Track if we need to update the file
 
 # Check latest NuGet versions
 for family, data in status_data.items():
-    nuget_name = data["nuget"].lower()  # Convert to lowercase for NuGet API
-    print(f"Checking {family} ({nuget_name})...")  # Debugging line
+    nuget_name = data.get("nuget", "").lower()
+    if not nuget_name:
+        print(f"Warning: NuGet package name missing for {family}, skipping.")
+        continue
 
-    response = requests.get(NUGET_API_URL.format(nuget_name))
+    print(f"Checking NuGet package: {family} ({nuget_name})...")
 
-    if response.status_code == 200:
+    try:
+        response = requests.get(NUGET_API_URL.format(nuget_name), timeout=10)
+        response.raise_for_status()
         versions = response.json().get("versions", [])
-        latest_version = versions[-1] if versions else None
+        if not versions:
+            print(f"Warning: No versions found for {family}, skipping.")
+            continue
+        latest_version = versions[-1]  # Ensure the latest version is fetched safely
+    except requests.RequestException as e:
+        print(f"Error fetching NuGet data for {family}: {e}")
+        continue
+    except IndexError:
+        print(f"Error: Empty versions list received for {family}, skipping.")
+        continue
 
-        if latest_version:
-            print(f"Latest NuGet version for {family}: {latest_version}")
-            print(f"Current version in status.json: {data['version']}")
+    print(f"Latest version: {latest_version}, Current version: {data.get('version', 'N/A')}")
 
-            # Store the latest version for future reference
-            status_data[family]["latest_version"] = latest_version
-
-            if latest_version != data["version"]:
-                updates_needed[family] = {
-                    "nuget": data["nuget"],
-                    "version": latest_version
-                }
-                print(f"Update needed for {family}.")
-            else:
-                print(f"Skipping {family}, version is up-to-date.")
-
-        else:
-            print(f"No versions found for {family}.")
-
-    elif response.status_code == 404:
-        print(f"ERROR: NuGet package not found for {family} ({nuget_name}).")
-        print(f"Check if {nuget_name} exists on https://www.nuget.org/packages/{nuget_name}/")
-    
+    if data.get("version") and latest_version != data["version"]:
+        updates_needed[family] = {"nuget": data["nuget"], "version": latest_version}
+        print(f"Update required for {family}.")
+        modified = True  # Mark that we need to update status.json
     else:
-        print(f"Failed to fetch data for {family}, HTTP {response.status_code}.")
+        print(f"{family} is up-to-date.")
 
-# Save the latest versions back to status.json
-with open(STATUS_FILE, "w", encoding="utf-8") as f:
-    json.dump(status_data, f, indent=2)
+# Save updated versions only if there were changes
+if modified:
+    with open(STATUS_FILE, "w", encoding="utf-8") as f:
+        json.dump(status_data, f, indent=2)
 
 # Output results for GitHub Actions
-print("Final updates needed:", json.dumps(updates_needed, indent=2))
-print(json.dumps(updates_needed))  # Ensures GitHub Actions captures it
+output_json = json.dumps(updates_needed)
+print("Updates needed:", output_json)
+print(output_json)  # Ensures GitHub Actions captures it
