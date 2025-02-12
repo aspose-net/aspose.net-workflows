@@ -13,10 +13,6 @@ if len(sys.argv) < 2:
 
 folder_path = sys.argv[1]
 
-if not os.path.exists(folder_path):
-    print("Warning: The 'api/' directory is missing. Skipping post-processing.")
-    sys.exit(0)
-
 print("Processing markdown files in api/...")
 for filename in os.listdir(folder_path):
     if filename.endswith(".md"):
