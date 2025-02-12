@@ -13,6 +13,8 @@ on:
 jobs:
   detect-updates:
     runs-on: windows-latest
+    outputs:
+      updates: ${{ steps.filter.outputs.updates }}  # Pass updates as an output
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -62,22 +64,19 @@ jobs:
               Write-Host "No updates found. Creating empty logs/updates.json"
               "[]" | Out-File -FilePath logs/updates.json -Encoding utf8
           }
-      
-      - name: Commit and Push Updates File
-        shell: pwsh
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add logs/updates.json
-          git commit -m "Update detected families JSON" || echo "No changes to commit"
-          git push
+
+          # ✅ Ensure GitHub Actions reads the JSON output
+          echo "updates=$TO_PROCESS" >> $GITHUB_ENV
+          echo "::set-output name=updates::$TO_PROCESS"
+
+
 
   process-family:
     needs: detect-updates
     runs-on: windows-latest
     strategy:
       matrix:
-        family: ${{ fromJson(needs.detect-updates.outputs.updates) }}
+        family: ${{ fromJson(needs.detect-updates.outputs.updates || '[]') }}
     steps:
       - name: Checkout Repository (Ensure Latest State)
         uses: actions/checkout@v4
