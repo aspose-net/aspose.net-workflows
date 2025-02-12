@@ -90,6 +90,11 @@ jobs:
 
       - name: Install Python Dependencies
         run: python -m pip install requests beautifulsoup4
+      - name: Debug Matrix Values
+        shell: pwsh
+        run: |
+          Write-Host "DEBUG: Family: ${{ matrix.family.family }}"
+          Write-Host "DEBUG: Version: ${{ matrix.family.version }}"
 
       - name: Process Family
         shell: pwsh
