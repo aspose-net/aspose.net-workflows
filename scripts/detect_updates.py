@@ -21,10 +21,11 @@ seen = set()
 
 for product in products_to_check:
     if product in status_data and product not in seen:
+        latest_version = status_data[product]["version"]  # Get latest version
         updates_needed.append({
             "family": product,
             "nuget": status_data[product]["nuget"],
-            "version": status_data[product]["version"]
+            "version": latest_version
         })
         seen.add(product)
 

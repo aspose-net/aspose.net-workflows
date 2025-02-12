@@ -32,7 +32,7 @@ for family, data in status_data.items():
         if not versions:
             print(f"Warning: No versions found for {family}, skipping.")
             continue
-        latest_version = versions[-1]  # Ensure the latest version is fetched safely
+        latest_version = versions[-1]  # Get the latest version from the list
     except requests.RequestException as e:
         print(f"Error fetching NuGet data for {family}: {e}")
         continue
@@ -42,8 +42,10 @@ for family, data in status_data.items():
 
     print(f"Latest version: {latest_version}, Current version: {data.get('version', 'N/A')}")
 
-    if data.get("version") and latest_version != data["version"]:
-        updates_needed[family] = {"nuget": data["nuget"], "version": latest_version}
+    # Update status.json if a newer version is found
+    if data.get("version") != latest_version:
+        status_data[family]["version"] = latest_version
+        updates_needed[family] = {"nuget": nuget_name, "version": latest_version}
         print(f"Update required for {family}.")
         modified = True  # Mark that we need to update status.json
     else:
