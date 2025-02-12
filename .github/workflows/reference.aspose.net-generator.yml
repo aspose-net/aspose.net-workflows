@@ -95,7 +95,11 @@ jobs:
         run: |
           Write-Host "DEBUG: Family: ${{ matrix.family.family }}"
           Write-Host "DEBUG: Version: ${{ matrix.family.version }}"
-
+      - name: Debug Postprocessor Command
+        shell: pwsh
+        run: |
+          Write-Host "Executing: python scripts/postprocessor.py '${{ matrix.family.family }}' '${{ matrix.family.version }}'"
+  
       - name: Process Family
         shell: pwsh
         run: |
