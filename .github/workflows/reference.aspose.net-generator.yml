@@ -61,7 +61,7 @@ jobs:
 
   process-products:
     needs: detect-updates
-    if: ${{ needs.detect-updates.outputs.to_process != '[]' }}
+    if: ${{ needs.detect-updates.outputs.to_process != '[]' && needs.detect-updates.outputs.to_process != '' }}
     runs-on: windows-latest
     strategy:
       matrix:
@@ -84,43 +84,3 @@ jobs:
 
       - name: Install Dependencies
         run: python -m pip install requests
-
-      - name: Download NuGet Package
-        shell: pwsh
-        run: |
-          $PACKAGE="${{ matrix.product.family }}"
-          $VERSION=$(python scripts/check_versions.py --get-latest-version $PACKAGE)
-          if (-not $VERSION) { Write-Error "Failed to get NuGet version for $PACKAGE"; exit 1 }
-
-          $URL="https://www.nuget.org/api/v2/package/$PACKAGE/$VERSION"
-          $OUTPUT="packages/$PACKAGE.$VERSION.nupkg"
-
-          New-Item -ItemType Directory -Path packages -Force
-          Invoke-WebRequest -Uri $URL -OutFile $OUTPUT -UseBasicParsing
-
-          if (-not (Test-Path $OUTPUT)) { Write-Error "Failed to download $PACKAGE"; exit 1 }
-
-      - name: Extract DLL & XML
-        run: python scripts\extract_files.py "${{ matrix.product.family }}"
-
-      - name: Generate docfx.json
-        run: python scripts\generate_docfx.py "${{ matrix.product.family }}"
-
-      - name: Download and Extract DocFX
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/dotnet/docfx/releases/download/v2.77.0/docfx-win-x64-v2.77.0.zip" -OutFile "docfx.zip"
-          Expand-Archive -Path "docfx.zip" -DestinationPath "docfx"
-          
-      - name: Run DocFX Metadata
-        shell: pwsh
-        run: |
-          .\docfx\docfx.exe metadata workspace\docfx.json --logLevel Warning
-
-      - name: Run Post-Processor
-        run: python scripts\postprocessor.py "workspace\api"
-
-      - name: Push Processed Content to `aspose.net`
-        env:
-          REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
-        run: python scripts\push_to_repo.py "${{ matrix.product.family }}"
