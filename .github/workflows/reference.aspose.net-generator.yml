@@ -64,10 +64,7 @@ jobs:
               Write-Host "No updates found. Creating empty logs/updates.json"
               "[]" | Out-File -FilePath logs/updates.json -Encoding utf8
           }
-
-          # ✅ Ensure GitHub Actions reads the JSON output
           echo "updates=$TO_PROCESS" >> $GITHUB_ENV
-          echo "::set-output name=updates::$TO_PROCESS"
 
 
 
@@ -105,14 +102,9 @@ jobs:
               if ($LASTEXITCODE -ne 0) { exit 1 }
               python scripts/generate_docfx.py "${{ matrix.family.nuget }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
-              python scripts/postprocessor.py "api"
+              python scripts/postprocessor.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
           }
-
-      - name: Debug FAMILY Variable
-        shell: pwsh
-        run: |
-          Write-Host "DEBUG: FAMILY variable before execution - $env:FAMILY"
 
       - name: Run push_to_repo.py
         env:

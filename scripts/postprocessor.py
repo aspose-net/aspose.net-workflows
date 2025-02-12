@@ -8,10 +8,13 @@ from urllib.parse import unquote
 
 # Check if the folder path is provided
 if len(sys.argv) < 2:
-    print("Usage: python process_docs.py <folder_path>")
+    print("Usage: python process_docs.py <family_name> <version>")
     sys.exit(1)
 
-folder_path = sys.argv[1]
+family_name = sys.argv[1]  # Pass family name (e.g., "Aspose.Words")
+version = sys.argv[2]  # Pass version number (e.g., "24.12.0")
+folder_path = "api"  # Keep "api" as static directory
+
 
 if not os.path.exists(folder_path):
     print("Warning: The 'api/' directory is missing. Skipping post-processing.")
@@ -24,16 +27,27 @@ for filename in os.listdir(folder_path):
         print(f"Processing {filepath}...")
 
 def process_internal_links(content):
-    """Process internal links to make them start with '/', convert to lowercase, and remove .md extension."""
+    """Process internal links to make them start with '/', convert to lowercase, and remove .md extension.
+       Also replaces 'Namespace: [FamilyName](/familyname)' with 'Namespace: [FamilyName](/)'.
+    """
     try:
-        # Find and replace links that are internal (without https and ending with .md)
+        # ✅ Find and replace internal links (without https and ending with .md)
         content = re.sub(
             r'\[([^\]]+)\]\((?!https?://)([^)]+\.md)\)',
             lambda m: f"[{m.group(1)}](/{m.group(2).lower().replace('.md', '').lstrip('/')})",
             content
         )
+
+        # ✅ Find and replace 'Namespace: [FamilyName](/familyname)' with 'Namespace: [FamilyName](/)'
+        content = re.sub(
+            rf'Namespace: \[{re.escape(family_name)}\]\(/' + re.escape(family_name.lower()) + r'\)',
+            f'Namespace: [{family_name}](/)',
+            content
+        )
+
     except Exception as e:
         print(f"Error processing internal links: {e}")
+    
     return content
 
 def extract_meta_info(file_content):
@@ -190,8 +204,22 @@ def format_examples(content):
 
     return content
 
+def add_assembly_version(content):
+    """Append version number to 'Assembly: FamilyName.dll' lines."""
+    try:
+        # Pattern to match 'Assembly: Aspose.Words.dll'
+        pattern = rf'Assembly: {re.escape(family_name)}\.dll'
+        replacement = f'Assembly: {family_name}.dll ({version})'
 
-def add_meta_info_to_file(file_path):
+        # Replace occurrences in content
+        content = re.sub(pattern, replacement, content)
+    except Exception as e:
+        print(f"Error adding assembly version: {e}")
+
+    return content
+
+
+def add_meta_info_to_file(file_path, layout_value):
     """Add YAML frontmatter, format content, and handle Namespace category files."""
     try:
         with open(file_path, 'r+', encoding='utf-8') as file:
@@ -209,39 +237,77 @@ def add_meta_info_to_file(file_path):
             content = replace_xref_tags_in_content(content)
             content = format_examples(content)
             content = process_internal_links(content)
+            content = add_assembly_version(content)  
 
-            meta_info = f"""---\nlinkTitle: "{clean_yaml_field(title)}"\ntitle: "{clean_yaml_field(title)}"\ndescription: "{clean_yaml_field(description)}"\nsummary: "{clean_yaml_field(summary)}"\ncategories:\n  - {category}\n---"""
 
-            # Write back changes
+            meta_info = f"""---
+linkTitle: "{clean_yaml_field(title)}"
+title: "{clean_yaml_field(title)}"
+description: "{clean_yaml_field(description)}"
+summary: "{clean_yaml_field(summary)}"
+categories:
+  - {category}
+layout: "{layout_value}"
+---"""
+
+            # ✅ Write back changes without affecting other processing
             file.seek(0)
             file.write(meta_info + "\n" + content)
             file.truncate()
     except Exception as e:
         print(f"Error processing file {file_path}: {e}")
 
+def update_frontmatter(content, layout_value):
+    """Ensures YAML metadata includes the correct layout without duplication."""
+    if content.startswith("---"):
+        end_index = content.find("\n---", 3)
+        if end_index == -1:
+            print("Warning: Invalid YAML frontmatter detected.")
+            return content
+
+        yaml_section = content[:end_index + 4]  
+        rest_of_content = content[end_index + 4:].strip()
+
+        if "layout:" in yaml_section:
+            yaml_section = re.sub(r'layout:\s*".*?"', f'layout: "{layout_value}"', yaml_section)
+        else:
+            yaml_section = yaml_section.rstrip() + f'\nlayout: "{layout_value}"\n'
+
+        return yaml_section + "\n\n" + rest_of_content
+    else:
+        return f"---\nlayout: \"{layout_value}\"\n---\n\n{content}"
+
 
 def rename_file():
-    """Rename the main markdown file to '_index.md'."""
-    old_file_path = os.path.join(folder_path, 'Aspose.Words.md')
-    new_file_path = os.path.join(folder_path, '_index.md')
+    """Process all .md files first, then rename {family}.md to _index.md."""
+    family_file = None
+    expected_filename = f"{family_name}.md"  # Expected filename based on argument
 
-    if os.path.exists(old_file_path):
+    # ✅ First, process all .md files (without renaming yet)
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        if filename == expected_filename:  # Match ONLY the passed family name
+            family_file = filename  # Store the correct file to rename later
+        elif filename.endswith('.md'):
+            add_meta_info_to_file(file_path, "reference-single")  # Process all other .md files normally
+
+    # ✅ Now rename {family}.md (e.g., Aspose.Words.md) to _index.md
+    if family_file:
+        old_file_path = os.path.join(folder_path, family_file)
+        new_file_path = os.path.join(folder_path, "_index.md")
+
         if os.path.exists(new_file_path):
             os.remove(new_file_path)
             print(f'Removed existing "{new_file_path}".')
 
         os.rename(old_file_path, new_file_path)
         print(f'Renamed "{old_file_path}" to "{new_file_path}".')
-        add_meta_info_to_file(new_file_path)
-    else:
-        print(f'File "{old_file_path}" not found.')
 
+        # ✅ Apply layout: "reference-home" to _index.md
+        add_meta_info_to_file(new_file_path, "reference-home")
 
 # Execute renaming and processing for all markdown files
 rename_file()
-
-for filename in os.listdir(folder_path):
-    if filename.endswith('.md') and filename != '_index.md':
-        add_meta_info_to_file(os.path.join(folder_path, filename))
 
 print("YAML frontmatter added, content formatted, and files processed successfully.")
