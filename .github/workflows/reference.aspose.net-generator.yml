@@ -75,7 +75,7 @@ jobs:
   process-family:
     needs: detect-updates
     runs-on: windows-latest
-
+    
     steps:
       - name: Checkout Repository (Ensure Latest State)
         uses: actions/checkout@v4
@@ -118,12 +118,8 @@ jobs:
               }
           }
 
-      - name: Set FAMILY Environment Variable
-        run: echo "FAMILY=${{ steps.filter.outputs.family }}" >> $GITHUB_ENV
-  
       - name: Run push_to_repo.py
         env:
           REPO_TOKEN: ${{ secrets.ASPOSE_PAT }}
-          FAMILY: ${{ env.FAMILY }}  # Ensure FAMILY is explicitly set
-        run: python scripts/push_to_repo.py "$FAMILY"
+        run: python scripts/push_to_repo.py ${{ steps.filter.outputs.family }}
         
