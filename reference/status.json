@@ -1,128 +1,127 @@
 {
-    "Aspose.Drawing": {
-      "nuget": "Aspose.Drawing",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.PUB": {
-      "nuget": "Aspose.PUB",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.OMR": {
-      "nuget": "Aspose.OMR",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.3D": {
-      "nuget": "Aspose.3D",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.TeX": {
-      "nuget": "Aspose.TeX",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Font": {
-      "nuget": "Aspose.Font",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Finance": {
-      "nuget": "Aspose.Finance",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.PDF": {
-      "nuget": "Aspose.PDF",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Words": {
-      "nuget": "Aspose.Words",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Cells": {
-      "nuget": "Aspose.Cells",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Slides": {
-      "nuget": "Aspose.Slides.NET",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Email": {
-      "nuget": "Aspose.Email",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Imaging": {
-      "nuget": "Aspose.Imaging",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.HTML": {
-      "nuget": "Aspose.HTML",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.BarCode": {
-      "nuget": "Aspose.BarCode",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.CAD": {
-      "nuget": "Aspose.CAD",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Tasks": {
-      "nuget": "Aspose.Tasks",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.OCR": {
-      "nuget": "Aspose.OCR",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Diagram": {
-      "nuget": "Aspose.Diagram",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Zip": {
-      "nuget": "Aspose.Zip",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Note": {
-      "nuget": "Aspose.Note",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.SVG": {
-      "nuget": "Aspose.SVG",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.PSD": {
-      "nuget": "Aspose.PSD",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.GIS": {
-      "nuget": "Aspose.GIS",
-      "version": "0.0.0",
-      "processed": ""
-    },
-    "Aspose.Page": {
-      "nuget": "Aspose.Page",
-      "version": "0.0.0",
-      "processed": ""
-    }
+  "Aspose.Drawing": {
+    "nuget": "Aspose.Drawing",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.PUB": {
+    "nuget": "Aspose.PUB",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.OMR": {
+    "nuget": "Aspose.OMR",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.3D": {
+    "nuget": "Aspose.3D",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.TeX": {
+    "nuget": "Aspose.TeX",
+    "version": "25.2.0",
+    "processed": "2025-02-12"
+  },
+  "Aspose.Font": {
+    "nuget": "Aspose.Font",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Finance": {
+    "nuget": "Aspose.Finance",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.PDF": {
+    "nuget": "Aspose.PDF",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Words": {
+    "nuget": "Aspose.Words",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Cells": {
+    "nuget": "Aspose.Cells",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Slides": {
+    "nuget": "Aspose.Slides.NET",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Email": {
+    "nuget": "Aspose.Email",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Imaging": {
+    "nuget": "Aspose.Imaging",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.HTML": {
+    "nuget": "Aspose.HTML",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.BarCode": {
+    "nuget": "Aspose.BarCode",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.CAD": {
+    "nuget": "Aspose.CAD",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Tasks": {
+    "nuget": "Aspose.Tasks",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.OCR": {
+    "nuget": "Aspose.OCR",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Diagram": {
+    "nuget": "Aspose.Diagram",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Zip": {
+    "nuget": "Aspose.Zip",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Note": {
+    "nuget": "Aspose.Note",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.SVG": {
+    "nuget": "Aspose.SVG",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.PSD": {
+    "nuget": "Aspose.PSD",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.GIS": {
+    "nuget": "Aspose.GIS",
+    "version": "0.0.0",
+    "processed": ""
+  },
+  "Aspose.Page": {
+    "nuget": "Aspose.Page",
+    "version": "0.0.0",
+    "processed": ""
   }
-  
+}
