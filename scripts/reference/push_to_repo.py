@@ -28,8 +28,12 @@ FOLDER_MAP = {
     "Aspose.PUB": "pub",
     "Aspose.SVG": "svg",
     "Aspose.Finance": "finance",
-    "Aspose.OMR": "omr"
+    "Aspose.OMR": "omr",
+    "Aspose.Drawing": "drawing"
 }
+
+# ✅ Log all received arguments for debugging
+print(f"DEBUG: Received arguments: {sys.argv}")
 
 # ✅ Fix: Ensure argument is received
 if len(sys.argv) < 2 or not sys.argv[1].strip():
@@ -111,7 +115,7 @@ try:
             "--body", f"This PR updates the API documentation for {FOLDER_NAME}.",
             "--base", "main",
             "--head", BRANCH_NAME
-        ], check=False)  # Allow failure without breaking the script
+        ], check=False)
 
         if pr_result.returncode == 0:
             print(f"Pull request created for {BRANCH_NAME}.")

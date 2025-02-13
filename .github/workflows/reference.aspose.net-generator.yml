@@ -31,7 +31,7 @@ jobs:
 
       - name: Fetch Latest Versions from NuGet
         id: check_versions
-        run: python scripts/check_versions.py
+        run: python scripts/reference/check_versions.py
 
       - name: Filter Products for Processing
         id: filter
@@ -47,7 +47,7 @@ jobs:
           Write-Host "DEBUG: Processing products: $PRODUCTS"
 
           # Run detect_updates.py to determine products needing updates
-          $TO_PROCESS = python scripts/detect_updates.py "$PRODUCTS" | Out-String
+          $TO_PROCESS = python scripts/reference/detect_updates.py "$PRODUCTS" | Out-String
           $TO_PROCESS = $TO_PROCESS.Trim()
 
           Write-Host "DEBUG: Raw JSON from detect_updates.py:"
@@ -98,7 +98,7 @@ jobs:
       - name: Debug Postprocessor Command
         shell: pwsh
         run: |
-          Write-Host "Executing: python scripts/postprocessor.py '${{ matrix.family.family }}' '${{ matrix.family.version }}'"
+          Write-Host "Executing: python scripts/reference/postprocessor.py '${{ matrix.family.family }}' '${{ matrix.family.version }}'"
   
       - name: Process Family
         shell: pwsh
@@ -107,11 +107,11 @@ jobs:
           echo "FAMILY=${{ matrix.family.family }}" >> $env:GITHUB_ENV
 
           if (-Not (Test-Path "workspace/docfx/api")) {
-              python scripts/extract_files.py "${{ matrix.family.nuget }}" "${{ matrix.family.version }}" "${{ matrix.family.family }}"
+              python scripts/reference/extract_files.py "${{ matrix.family.nuget }}" "${{ matrix.family.version }}" "${{ matrix.family.family }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
-              python scripts/generate_docfx.py "${{ matrix.family.nuget }}"
+              python scripts/reference/generate_docfx.py "${{ matrix.family.nuget }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
-              python scripts/postprocessor.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
+              python scripts/reference/postprocessor.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
               if ($LASTEXITCODE -ne 0) { exit 1 }
           }
 
@@ -124,9 +124,9 @@ jobs:
       - name: Update Processed Status
         shell: pwsh
         run: |
-          python scripts/update_status.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
+          python scripts/reference/update_status.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
 
       - name: Run push_to_repo.py
         env:
           REPO_TOKEN: ${{ secrets.ASPOSE_PAT }}
-        run: python scripts/push_to_repo.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
+        run: python scripts/reference/push_to_repo.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
