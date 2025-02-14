@@ -27,19 +27,17 @@ for filename in os.listdir(folder_path):
         filepath = os.path.join(folder_path, filename)
         print(f"Processing {filepath}...")
 
+# Clean the family name
+clean_family = family_name.replace("Aspose.", "").lower()  # "Aspose.Words" → "words"
+
 def process_internal_links(content):
-    """Process internal links to make them start with '/', convert to lowercase, and remove .md extension.
-       Also replaces 'Namespace: [FamilyName](/familyname)' with 'Namespace: [FamilyName](/)'.
-    """
     try:
-        # ✅ Find and replace internal links (without https and ending with .md)
         content = re.sub(
             r'\[([^\]]+)\]\((?!https?://)([^)]+\.md)\)',
-            lambda m: f"[{m.group(1)}](/{m.group(2).lower().replace('.md', '').lstrip('/')})",
+            lambda m: f"[{m.group(1)}](/{clean_family}/{m.group(2).lower().replace('.md', '').lstrip('/')})",
             content
         )
 
-        # ✅ Find and replace 'Namespace: [FamilyName](/familyname)' with 'Namespace: [FamilyName](/)'
         content = re.sub(
             rf'Namespace: \[{re.escape(family_name)}\]\(/' + re.escape(family_name.lower()) + r'\)',
             f'Namespace: [{family_name}](/)',
