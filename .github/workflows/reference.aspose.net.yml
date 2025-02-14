@@ -88,6 +88,7 @@ jobs:
         run: |
           home_workflow=$(cat home_workflow.txt)
           workflow_name=$(basename "$home_workflow")
+          selected_environment="${{ github.event.inputs.environment }}"
           echo "Triggering home workflow: $workflow_name with environment: $selected_environment"
 
           if gh workflow run "$workflow_name" --field environment="$selected_environment"; then
