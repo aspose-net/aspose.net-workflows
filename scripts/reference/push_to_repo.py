@@ -48,8 +48,6 @@ if not FOLDER_NAME:
     print(f"ERROR: No folder mapping found for FAMILY '{FAMILY}'. Check the mapping dictionary.")
     sys.exit(1)
 
-print(f"DEBUG: Mapping FAMILY '{FAMILY}' to folder '{FOLDER_NAME}'.")
-
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 BRANCH_NAME = f"api-update-{FOLDER_NAME}-{timestamp}"
 
@@ -61,7 +59,7 @@ if not GITHUB_TOKEN:
 repo_url = f"https://{GITHUB_TOKEN}@github.com/Aspose/aspose.net.git"
 DEST_PATH = f"aspose.net/content/reference.aspose.net/{FOLDER_NAME}/en/"
 
-print(f"DEBUG: Cloning repository to update API reference for '{FOLDER_NAME}'.")
+print(f"DEBUG: Cloning repository to update API reference for '{FAMILY}'.")
 
 # Clone repository
 try:
@@ -97,7 +95,7 @@ try:
     # Check if there are any changes
     commit_status = subprocess.run(["git", "diff", "--cached", "--exit-code"], check=False)
     if commit_status.returncode != 0:
-        subprocess.run(["git", "commit", "-m", f"Update API reference for {FOLDER_NAME}"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Update API reference for {FAMILY}"], check=True)
         subprocess.run(["git", "push", "--set-upstream", "origin", BRANCH_NAME], check=True)
 
         # ✅ Fix: Authenticate GitHub CLI before creating PR
@@ -111,8 +109,8 @@ try:
         pr_result = subprocess.run([
             "gh", "pr", "create",
             "--repo", "Aspose/aspose.net",
-            "--title", f"Update API Docs for {FOLDER_NAME}",
-            "--body", f"This PR updates the API documentation for {FOLDER_NAME}.",
+            "--title", f"Update API Docs for {FAMILY}",
+            "--body", f"This PR updates the API documentation for {FAMILY}.",
             "--base", "main",
             "--head", BRANCH_NAME
         ], check=False)
@@ -128,5 +126,3 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"ERROR: Git operations failed: {e}")
     sys.exit(1)
-
-print(f"DEBUG: API reference for '{FOLDER_NAME}' pushed successfully.")
