@@ -102,7 +102,7 @@ def replace_xref_tags_in_content(content):
 
 
 def clean_yaml_field(value):
-    """Clean and decode YAML fields to remove special characters."""
+    """Clean and decode YAML fields to remove special characters and unnecessary code block markers."""
     if not value:
         return ""
 
@@ -115,6 +115,9 @@ def clean_yaml_field(value):
             value = BeautifulSoup(value, 'html.parser').get_text()
         except Exception as e:
             print(f"Warning: Failed to parse HTML content: {value}. Error: {e}")
+
+    # ✅ Remove triple backticks if the content starts with a code block
+    value = re.sub(r"^```[a-zA-Z0-9]+\s*", "", value).strip()
 
     # Escape YAML problematic characters
     value = value.replace("\n", " ").strip()
@@ -135,7 +138,9 @@ def format_section_to_table(content, section_name):
             "Classes": "Class",
             "Namespaces": "Namespace",
             "Interfaces": "Interface",
-            "Enums": "Enum"
+            "Enums": "Enum",
+            "Delegates": "Delegate",
+            "Structs": "Struct"
         }.get(section_name, section_name[:-1])
 
         items = []
@@ -167,9 +172,8 @@ def format_section_to_table(content, section_name):
 
 
 def format_examples(content):
-    """Fix 'Examples' section with proper closing of C# and Visual Basic code blocks."""
-    
-    # Case 1: Handle both C# and Visual Basic code blocks
+
+    # Case 1: Handle both C# and Visual Basic code blocks correctly
     content = re.sub(
         r'<pre><code class="lang-csharp">\[C#\](.*?)\[Visual Basic\](.*?)</code></pre>',
         lambda m: f'```csharp\n{m.group(1).strip()}\n```\n```vb\n{m.group(2).strip()}\n```',
@@ -183,19 +187,19 @@ def format_examples(content):
         content, flags=re.DOTALL
     )
 
-    # Case 3: Single-line code block (both tags on the same line)
+    # Case 3: Single-line C# code block (both tags on the same line)
     content = re.sub(
         r'<pre><code class="lang-csharp">(.*?)</code></pre>',
         lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'`{m.group(1).strip()}`',
         content
     )
 
-    #Case 4: Multi-line code block
+    # Case 4: Multi-line code block (Ensure no extra newline before `csharp`)
     content = re.sub(
-    r'<pre><code class="lang-csharp">(.*?)</code></pre>',
-    lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'```\ncsharp\n{m.group(1).strip()}\n```',
-    content,
-    flags=re.DOTALL  # Enables multi-line matching
+        r'<pre><code class="lang-csharp">(.*?)</code></pre>',
+        lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'```csharp\n{m.group(1).strip()}\n```',
+        content,
+        flags=re.DOTALL  # Enables multi-line matching
     )
 
     def process_example_block(match):
@@ -254,7 +258,7 @@ def add_meta_info_to_file(file_path, layout_value):
             content = '\n'.join(content.splitlines()[1:])
 
             if category == "Namespace":
-                for section in ["Classes", "Interfaces", "Enums", "Namespaces"]:
+                for section in ["Structs", "Delegates", "Classes", "Interfaces", "Enums", "Namespaces"]:
                     content = format_section_to_table(content, section)
 
             # Format and clean content
