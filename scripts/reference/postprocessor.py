@@ -15,8 +15,6 @@ family_name = sys.argv[1]  # Pass family name (e.g., "Aspose.Words")
 version = sys.argv[2]  # Pass version number (e.g., "24.12.0")
 folder_path = "workspace/docfx/api"
 
-
-
 if not os.path.exists(folder_path):
     print("Warning: The 'workspace/docfx/api' directory is missing. Skipping post-processing.")
     sys.exit(0)
@@ -28,26 +26,37 @@ for filename in os.listdir(folder_path):
         print(f"Processing {filepath}...")
 
 # Clean the family name
-clean_family = family_name.replace("Aspose.", "").lower()  # "Aspose.Words" → "words"
+family = family_name.replace("Aspose.", "").lower()  # "Aspose.Words" → "words"
 
 def process_internal_links(content):
+    """Processes internal markdown links:
+       - Fix 'Namespace: [FamilyName](FamilyName.md)' before modifying other links.
+       - Convert internal links to lowercase.
+       - Remove .md extension.
+       - Inject the cleaned family name in the link path.
+    """
     try:
+        # ✅ STEP 1: Fix 'Namespace' links FIRST
         content = re.sub(
-            r'\[([^\]]+)\]\((?!https?://)([^)]+\.md)\)',
-            lambda m: f"[{m.group(1)}](/{clean_family}/{m.group(2).lower().replace('.md', '').lstrip('/')})",
+            rf'Namespace: \[{re.escape(family_name)}\]\(\s*{re.escape(family_name)}\.md\s*\)',
+            f'Namespace: [{family_name}](/{family}/)',
             content
         )
 
+        # ✅ STEP 2: Find and replace internal links (without https and ending with .md)
         content = re.sub(
-            rf'Namespace: \[{re.escape(family_name)}\]\(/' + re.escape(family_name.lower()) + r'\)',
-            f'Namespace: [{family_name}](/)',
+            r'\[([^\]]+)\]\((?!https?://)([^)]+\.md)\)',
+            lambda m: f"[{m.group(1)}](/{family}/{m.group(2).lower().replace('.md', '').lstrip('/')})"
+            if not m.group(2).lower().startswith(family)  # Avoid redundant family names
+            else f"[{m.group(1)}](/" + m.group(2).lower().replace('.md', '').lstrip('/') + ")",
             content
         )
 
     except Exception as e:
         print(f"Error processing internal links: {e}")
-    
+
     return content
+
 
 def extract_meta_info(file_content):
     """Extract title, description, summary, and determine the category."""
@@ -135,14 +144,14 @@ def format_section_to_table(content, section_name):
         if section_name == "Namespaces":
             item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)', section_content)
             for name, link in item_blocks:
-                cleaned_link = f"/{link.lower().replace('.md', '')}"
+                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}"
                 items.append((name, cleaned_link, ""))  # No description for Namespaces
 
         # Handle other sections with descriptions
         else:
             item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)(?:\s*\n\s*(.*?))?(?=\n\s*\[|\n###|\Z)', section_content, re.DOTALL)
             for name, link, desc in item_blocks:
-                cleaned_link = f"/{link.lower().replace('.md', '')}"
+                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}"
                 description = desc.strip().replace("\n", " ") if desc else ""  # Empty if no description
                 items.append((name, cleaned_link, description))
 
