@@ -306,16 +306,26 @@ def update_frontmatter(content, layout_value):
         return f"---\nlayout: \"{layout_value}\"\n---\n\n{content}"
 
 
+# Define a mapping for special cases where the .md filename does not match the expected family name
+FAMILY_NAME_MAPPING = {
+    "Aspose.HTML": "Aspose.Html",  # Example: Aspose.HTML should match Aspose.Html.md
+}
+
 def rename_file():
     """Process all .md files first, then rename {family}.md to _index.md."""
+    # Use mapped value if found, otherwise use default naming convention
+    mapped_filename = FAMILY_NAME_MAPPING.get(family_name)
+    expected_filename = f"{mapped_filename}.md" if mapped_filename else f"{family_name}.md"
+
+    print(f"DEBUG: Expected filename determined as: {expected_filename}")
+
     family_file = None
-    expected_filename = f"{family_name}.md"  # Expected filename based on argument
 
     # ✅ First, process all .md files (without renaming yet)
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
 
-        if filename == expected_filename:  # Match ONLY the passed family name
+        if filename == expected_filename:  # Match ONLY the mapped or expected family name
             family_file = filename  # Store the correct file to rename later
         elif filename.endswith('.md'):
             add_meta_info_to_file(file_path, "reference-single")  # Process all other .md files normally
