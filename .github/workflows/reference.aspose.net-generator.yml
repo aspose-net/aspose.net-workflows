@@ -90,21 +90,18 @@ jobs:
 
       - name: Install Python Dependencies
         run: python -m pip install requests beautifulsoup4
-      - name: Debug Matrix Values
+
+      - name: Debug 
         shell: pwsh
         run: |
           Write-Host "DEBUG: Family: ${{ matrix.family.family }}"
           Write-Host "DEBUG: Version: ${{ matrix.family.version }}"
-      - name: Debug Postprocessor Command
-        shell: pwsh
-        run: |
           Write-Host "Executing: python scripts/reference/postprocessor.py '${{ matrix.family.family }}' '${{ matrix.family.version }}'"
-  
+
       - name: Process Family
         shell: pwsh
         run: |
           Write-Host "Processing: ${{ matrix.family.family }}"
-          echo "FAMILY=${{ matrix.family.family }}" >> $env:GITHUB_ENV
 
           if (-Not (Test-Path "workspace/docfx/api")) {
               python scripts/reference/extract_files.py "${{ matrix.family.nuget }}" "${{ matrix.family.version }}" "${{ matrix.family.family }}"
@@ -115,18 +112,18 @@ jobs:
               if ($LASTEXITCODE -ne 0) { exit 1 }
           }
 
-      - name: Configure Git Identity
+      - name: Prepare to Push
         shell: pwsh
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-      - name: Update Processed Status
-        shell: pwsh
-        run: |
-          python scripts/reference/update_status.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
-
-      - name: Run push_to_repo.py
+      - name: Push ${{ matrix.family.family }} to aspose.net/content/reference.aspose.net/
         env:
           REPO_TOKEN: ${{ secrets.ASPOSE_PAT }}
         run: python scripts/reference/push_to_repo.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
+      
+      - name: Update Status
+        shell: pwsh
+        run: |
+          python scripts/reference/update_status.py "${{ matrix.family.family }}" "${{ matrix.family.version }}"
