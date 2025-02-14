@@ -183,6 +183,14 @@ def format_examples(content):
         content
     )
 
+    #Case 4: Multi-line code block
+    content = re.sub(
+    r'<pre><code class="lang-csharp">(.*?)</code></pre>',
+    lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'```\ncsharp\n{m.group(1).strip()}\n```',
+    content,
+    flags=re.DOTALL  # Enables multi-line matching
+    )
+
     def process_example_block(match):
         # Extract content inside <example>
         description = match.group(1).strip()
@@ -198,7 +206,15 @@ def format_examples(content):
         process_example_block,
         content, flags=re.DOTALL
     )
-
+    
+    # remove </attachedfile> if within <pre> & </pre>
+    content = re.sub(
+    r'(<pre>.*?</pre>)',
+    lambda m: re.sub(r'</attachedfile>', '', m.group(1), flags=re.DOTALL),
+    content,
+    flags=re.DOTALL
+)
+    
     # Remove any additional Visual Basic tags
     content = re.sub(r'\[Visual Basic\]\s*', '', content)
     content = re.sub(r'\[VB\.NET\]\s*', '', content)
