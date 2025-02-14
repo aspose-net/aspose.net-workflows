@@ -144,14 +144,14 @@ def format_section_to_table(content, section_name):
         if section_name == "Namespaces":
             item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)', section_content)
             for name, link in item_blocks:
-                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}"
+                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}/"
                 items.append((name, cleaned_link, ""))  # No description for Namespaces
 
         # Handle other sections with descriptions
         else:
             item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)(?:\s*\n\s*(.*?))?(?=\n\s*\[|\n###|\Z)', section_content, re.DOTALL)
             for name, link, desc in item_blocks:
-                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}"
+                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}/"
                 description = desc.strip().replace("\n", " ") if desc else ""  # Empty if no description
                 items.append((name, cleaned_link, description))
 
