@@ -46,7 +46,12 @@ def extract_sitemaps_from_index(sitemap_url):
     try:
         response = requests.get(sitemap_url, timeout=5)
         if response.status_code == 200:
-            tree = ET.ElementTree(ET.fromstring(response.text))
+            root = ET.fromstring(response.text)
+            # Check if this is a sitemap index (root tag should be "sitemapindex")
+            if not root.tag.endswith("sitemapindex"):
+                # Not a sitemap index; return empty list so the sitemap is submitted directly.
+                return []
+            tree = ET.ElementTree(root)
             sitemaps = [url.text for url in tree.findall(".//{*}loc")]
             return sitemaps
     except requests.RequestException as e:
