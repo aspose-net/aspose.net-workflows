@@ -1,0 +1,16 @@
+apiRules:
+  # 1. Allow everything in Aspose.Pdf.Plugins (all classes, interfaces, enums, and their members)
+  - include:
+      uidRegex: "^(?:T:)?Aspose\\.Pdf\\.Plugins(?:$|\\..+)"
+  
+  # 2. Include Aspose.Pdf.Document and Aspose.Pdf.Metered
+  - include:
+      uidRegex: "^(?:T:)?Aspose\\.Pdf\\.(Document|Metered)(?:$|\\..+)"
+  
+  # 3. Exclude Aspose.JavaDeleteAttribute and Aspose.JavaManualAttribute (and their members)
+  - exclude:
+      uidRegex: "^(?:T:)?Aspose\\.(?:JavaDeleteAttribute|JavaManualAttribute)(\\.|$)"
+      
+  # 4. Exclude everything else under Aspose.Pdf and Aspose.Foundation.UriResolver
+  - exclude:
+      uidRegex: "^(?:T:)?(?:Aspose\\.Foundation\\.UriResolver|Aspose\\.Pdf)(?:$|\\..+)"
