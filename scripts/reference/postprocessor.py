@@ -126,7 +126,7 @@ def clean_yaml_field(value):
 
 
 def format_section_to_table(content, section_name):
-    """Format specific sections like Classes, Interfaces, Enums, or Namespaces into a markdown table."""
+    """Format specific sections like Classes, Interfaces, Enums, Namespaces, or Delegates into a markdown table."""
     heading_level = "###" if section_name == "Namespaces" else "##"
 
     # Match the section based on the heading level
@@ -150,14 +150,28 @@ def format_section_to_table(content, section_name):
             item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)', section_content)
             for name, link in item_blocks:
                 cleaned_link = f"/{family}/{link.lower().replace('.md', '')}/"
-                items.append((name, cleaned_link, ""))  # No description for Namespaces
-
-        # Handle other sections with descriptions
-        else:
-            item_blocks = re.findall(r'\[(.*?)\]\((.*?)\)(?:\s*\n\s*(.*?))?(?=\n\s*\[|\n###|\Z)', section_content, re.DOTALL)
+                items.append((name, cleaned_link, ""))
+        # Handle Delegates with modified regex to avoid merging rows
+        elif section_name == "Delegates":
+            item_blocks = re.findall(
+                r'\[(.*?)\]\((.*?)\)(?:\s*\n(?!\s*\[)(.*?))?(?=\n\s*\[|\n###|\Z)',
+                section_content,
+                re.DOTALL
+            )
             for name, link, desc in item_blocks:
                 cleaned_link = f"/{family}/{link.lower().replace('.md', '')}/"
-                description = desc.strip().replace("\n", " ") if desc else ""  # Empty if no description
+                description = desc.strip().replace("\n", " ") if desc else ""
+                items.append((name, cleaned_link, description))
+        # Handle other sections with descriptions
+        else:
+            item_blocks = re.findall(
+                r'\[(.*?)\]\((.*?)\)(?:\s*\n\s*(.*?))?(?=\n\s*\[|\n###|\Z)',
+                section_content,
+                re.DOTALL
+            )
+            for name, link, desc in item_blocks:
+                cleaned_link = f"/{family}/{link.lower().replace('.md', '')}/"
+                description = desc.strip().replace("\n", " ") if desc else ""
                 items.append((name, cleaned_link, description))
 
         # Generate the markdown table
@@ -183,23 +197,27 @@ def format_examples(content):
     # Case 2: Multiline C# code block without Visual Basic mention
     content = re.sub(
         r'<example><pre><code class="lang-csharp">(.*?)</code></pre></example>',
-        lambda m: f'```csharp\n{m.group(1).strip()}\n```',
+        lambda m: f'\n```csharp\n{m.group(1).strip()}\n```',
         content, flags=re.DOTALL
     )
 
-    # Case 3: Single-line C# code block (both tags on the same line)
+    # Combined Cases 3 & 4: Process generic C# code blocks
+    def replace_csharp_block(match):
+        code = match.group(1).strip()
+        # Special check: remove leading "[C#]" if present
+        if code.startswith("[C#]"):
+            code = code[len("[C#]"):].strip()
+        # Format as inline if single-line, else as fenced block with 'csharp' on the same line
+        if "\n" in code:
+            return f'\n```csharp\n{code}\n```'
+        else:
+            return f'`{code}`'
+    
     content = re.sub(
         r'<pre><code class="lang-csharp">(.*?)</code></pre>',
-        lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'`{m.group(1).strip()}`',
-        content
-    )
-
-    # Case 4: Multi-line code block (Ensure no extra newline before `csharp`)
-    content = re.sub(
-        r'<pre><code class="lang-csharp">(.*?)</code></pre>',
-        lambda m: f'`{m.group(1).strip()}`' if '\n' not in m.group(1) else f'```csharp\n{m.group(1).strip()}\n```',
+        replace_csharp_block,
         content,
-        flags=re.DOTALL  # Enables multi-line matching
+        flags=re.DOTALL
     )
 
     def process_example_block(match):
@@ -218,19 +236,20 @@ def format_examples(content):
         content, flags=re.DOTALL
     )
     
-    # remove </attachedfile> if within <pre> & </pre>
+    # Remove </attachedfile> if within <pre> & </pre>
     content = re.sub(
-    r'(<pre>.*?</pre>)',
-    lambda m: re.sub(r'</attachedfile>', '', m.group(1), flags=re.DOTALL),
-    content,
-    flags=re.DOTALL
-)
+        r'(<pre>.*?</pre>)',
+        lambda m: re.sub(r'</attachedfile>', '', m.group(1), flags=re.DOTALL),
+        content,
+        flags=re.DOTALL
+    )
     
     # Remove any additional Visual Basic tags
     content = re.sub(r'\[Visual Basic\]\s*', '', content)
     content = re.sub(r'\[VB\.NET\]\s*', '', content)
 
     return content
+
 
 def add_assembly_version(content):
     """Append version number to 'Assembly: FamilyName.dll' lines."""
