@@ -29,6 +29,21 @@ jobs:
       - name: Install Dependencies
         run: python -m pip install requests
 
+      - name: Determine Run Type (Manual vs Scheduled)
+        id: run-type
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "scheduled_run=true" >> $GITHUB_ENV
+          else
+            echo "scheduled_run=false" >> $GITHUB_ENV
+          fi
+
+      - name: Set Default Products for Scheduled Runs Only
+        if: env.scheduled_run == 'true'
+        run: |
+          echo "Scheduled run detected. Setting products to 'all'."
+          echo "products=all" >> $GITHUB_ENV
+
       - name: Fetch Latest Versions from NuGet
         id: check_versions
         run: python scripts/reference/check_versions.py
@@ -37,9 +52,9 @@ jobs:
         id: filter
         shell: pwsh
         run: |
-          Write-Host "DEBUG: Received products input: ${{ github.event.inputs.products }}"
+          Write-Host "DEBUG: Received products input: ${{ github.event.inputs.products || env.products || 'all' }}"
 
-          $PRODUCTS = "${{ github.event.inputs.products }}"
+          $PRODUCTS = "${{ github.event.inputs.products || env.products || 'all' }}"
           if ($PRODUCTS -eq "all") {
               $PRODUCTS = (Get-Content reference/status.json | ConvertFrom-Json | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ","
           }
@@ -66,7 +81,6 @@ jobs:
           }
           echo "updates=$TO_PROCESS" >> $GITHUB_ENV
           echo "::set-output name=updates::$TO_PROCESS"
-
 
   process-family:
     needs: detect-updates
