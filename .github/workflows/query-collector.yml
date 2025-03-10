@@ -1,0 +1,50 @@
+name: Query Collector
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update_queries:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        subdomain: [ "docs.aspose.net", "blog.aspose.net", "kb.aspose.net", "reference.aspose.net", "products.aspose.net" ]
+    env:
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-api-python-client google-auth google-auth-oauthlib google-auth-httplib2
+
+      - name: Checkout destination repository
+        uses: actions/checkout@v3
+        with:
+          repository: aspose/aspose.net
+          token: ${{ secrets.DESTINATION_REPO_PAT }}
+          path: destination_repo
+
+      - name: Run keyword extraction for ${{ matrix.subdomain }}
+        run: |
+          python scripts/gsc/query-collector.py --subdomain ${{ matrix.subdomain }} --base-dir destination_repo/keywords
+
+      - name: Commit and push changes for ${{ matrix.subdomain }}
+        working-directory: destination_repo
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          # Pull latest changes to avoid conflicts
+          git pull --rebase origin main
+          git add keywords/
+          git diff --cached --quiet || git commit -m "Update queries for ${{ matrix.subdomain }}"
+          git push origin main || echo "Push failed due to concurrent update. Consider handling merge conflicts."
