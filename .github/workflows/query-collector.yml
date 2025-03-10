@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: aspose/aspose.net
-          token: ${{ secrets.DESTINATION_REPO_PAT }}
+          token: ${{ secrets.REPO_TOKEN }}
           path: destination_repo
 
       - name: Run keyword extraction for ${{ matrix.subdomain }}
