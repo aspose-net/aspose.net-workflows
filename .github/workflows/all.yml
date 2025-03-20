@@ -21,8 +21,8 @@ jobs:
 
       - name: Get sibling workflows
         run: |
-          # Exclude the main workflow file (all.yml) from the list of workflows
-          workflows=$(find .github/workflows -type f -name '*.yml' ! -name 'all.yml')
+          # Exclude the main workflow file (all.yml) and any file containing a dash in its name
+          workflows=$(find .github/workflows -type f -name '*.yml' ! -name 'all.yml' ! -name '*-*')
           echo "Filtered sibling workflows found:"
           echo "$workflows"
           echo "$workflows" > workflows.txt
