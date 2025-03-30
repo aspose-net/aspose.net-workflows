@@ -190,7 +190,7 @@ def format_examples(content):
     # Case 1: Handle both C# and Visual Basic code blocks correctly
     content = re.sub(
         r'<pre><code class="lang-csharp">\[C#\](.*?)\[Visual Basic\](.*?)</code></pre>',
-        lambda m: f'```csharp\n{m.group(1).strip()}\n```\n```vb\n{m.group(2).strip()}\n```',
+        lambda m: f'\n```csharp\n{m.group(1).strip()}\n```\n```vb\n{m.group(2).strip()}\n```',
         content, flags=re.DOTALL
     )
 
