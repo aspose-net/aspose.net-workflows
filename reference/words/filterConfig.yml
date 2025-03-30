@@ -1,10 +1,23 @@
 apiRules:
+  # Include complete namespaces
   - include:
-      uidRegex: ^Aspose\.Words\.LowCode(\..*)?$  
+      uidRegex: ^Aspose\.Words\.LowCode(?:\..+)?$
   - include:
-      uidRegex: ^Aspose\.Words\.(License|Metered|SaveFormat|Document)$
+      uidRegex: ^Aspose\.Words\.Loading(?:\..+)?$
+  - include:
+      uidRegex: ^Aspose\.Words\.Saving(?:\..+)?$
+
+  # Include individual classes/options
+  - include:
+      uidRegex: ^Aspose\.Words\.Document$
+  - include:
+      uidRegex: ^Aspose\.Words\.Metered$
   - include:
       uidRegex: ^Aspose\.Words\.Comparing\.CompareOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.Reporting\.ReportBuildOptions$
+  - include:
+      uidRegex: ^Aspose\.Words\.MailMerging\.MailMergeCleanupOptions$
   - include:
       uidRegex: ^Aspose\.Words\.Replacing\.FindReplaceOptions$
   - include:
@@ -12,16 +25,8 @@ apiRules:
   - include:
       uidRegex: ^Aspose\.Words\.ImageWatermarkOptions$
   - include:
-      uidRegex: ^Aspose\.Words\.Saving\.(SaveOptions|ImageSaveOptions)$
-  - include:
-      uidRegex: ^Aspose\.Words\.Loading\.LoadOptions$
-  - include:
-      uidRegex: ^Aspose\.Words\.Reporting\.ReportBuildOptions$
-  - include:
-      uidRegex: ^Aspose\.Words\.MailMerging\.MailMergeCleanupOptions$
-  - include:
-      uidRegex: ^Aspose\.Words\.Loading\.LoadOptions\[\]$
-  - include:
-      uidRegex: ^Aspose\.Words\.Document\[\]$
+      uidRegex: ^Aspose\.Words\.SaveFormat$
+
+  # Exclude all other Aspose.Words APIs
   - exclude:
-      uidRegex: ^Aspose\.Words\.(?!LowCode(\..*)?$|License$|Metered$|SaveFormat$|Document$|Comparing\.CompareOptions$|Replacing\.FindReplaceOptions$|TextWatermarkOptions$|ImageWatermarkOptions$|Saving\.(SaveOptions$|ImageSaveOptions$)|Loading\.LoadOptions$|Reporting\.ReportBuildOptions$|MailMerging\.MailMergeCleanupOptions$|Loading\.LoadOptions\[\]$|Document\[\]$).+$
+      uidRegex: ^Aspose\.Words\.(?!(?:LowCode(?:$|\..+)|Loading(?:$|\..+)|Saving(?:$|\..+)|Document(?:$|\..+)|Metered(?:$|\..+)|Comparing\.CompareOptions(?:$|\..+)|Reporting\.ReportBuildOptions(?:$|\..+)|MailMerging\.MailMergeCleanupOptions(?:$|\..+)|Replacing\.FindReplaceOptions(?:$|\..+)|TextWatermarkOptions(?:$|\..+)|ImageWatermarkOptions(?:$|\..+)|SaveFormat(?:$|\..+))).+$
