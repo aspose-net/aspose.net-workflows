@@ -31,6 +31,7 @@ jobs:
 
       - name: Determine Run Type (Manual vs Scheduled)
         id: run-type
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
             echo "scheduled_run=true" >> $GITHUB_ENV
