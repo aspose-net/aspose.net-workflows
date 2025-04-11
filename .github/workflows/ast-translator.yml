@@ -18,26 +18,30 @@ on:
 
 jobs:
   prepare-matrix:
-    name: Prepare Family Matrix
+    name: Prepare Family-Language Matrix
     runs-on: ubuntu-latest
     outputs:
-      families_matrix: ${{ steps.set_matrix.outputs.families_matrix }}
+      matrix: ${{ steps.set_matrix.outputs.matrix }}
     steps:
-      - name: Convert families input to JSON array
+      - name: Convert families and languages inputs to JSON array of objects
         id: set_matrix
         shell: bash
         run: |
-          # Split the comma-separated families and trim spaces
+          # Split and trim families and languages inputs
           IFS=',' read -ra FAM_LIST <<< "${{ inputs.families }}"
+          IFS=',' read -ra LANG_LIST <<< "${{ inputs.languages }}"
           elements=()
           for fam in "${FAM_LIST[@]}"; do
             fam="$(echo -n "$fam" | xargs)"
-            if [[ -n "$fam" ]]; then
-              elements+=("\"$fam\"")
-            fi
+            if [[ -z "$fam" ]]; then continue; fi
+            for lang in "${LANG_LIST[@]}"; do
+              lang="$(echo -n "$lang" | xargs)"
+              if [[ -z "$lang" ]]; then continue; fi
+              elements+=("{\"family\": \"${fam}\", \"language\": \"${lang}\"}")
+            done
           done
           json="[$(IFS=,; echo "${elements[*]}")]"
-          echo "families_matrix=$json" >> $GITHUB_OUTPUT
+          echo "matrix=$json" >> $GITHUB_OUTPUT
 
   translate:
     name: Translate AST Files
@@ -47,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        family: ${{ fromJSON(needs.prepare-matrix.outputs.families_matrix) }}
+        include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     permissions:
       contents: write
     steps:
@@ -90,19 +94,18 @@ jobs:
           (
             sleep $SLEEP_DURATION
             echo "Auto-commit triggered; performing merge and push..."
-            for lang in $(echo "${{ inputs.languages }}" | tr ',' ' '); do
-              echo "Processing language $lang"
-              LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
-              REMOTE_FILE="translationcache/${lang}_cache.json"
-              if [ ! -s "$LOCAL_FILE" ]; then
-                echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $lang."
-                continue
-              fi
-              if [ ! -f "$REMOTE_FILE" ]; then
-                echo "{}" > "$REMOTE_FILE"
-              fi
-              python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-            done
+            LANG="${{ matrix.language }}"
+            echo "Processing language $LANG"
+            LOCAL_FILE="aspose-net/translation/${LANG}_cache.json"
+            REMOTE_FILE="translationcache/${LANG}_cache.json"
+            if [ ! -s "$LOCAL_FILE" ]; then
+              echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $LANG."
+              exit 0
+            fi
+            if [ ! -f "$REMOTE_FILE" ]; then
+              echo "{}" > "$REMOTE_FILE"
+            fi
+            python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
             python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
             cd translationcache
             # Retry pull-commit-push loop up to 10 times.
@@ -110,7 +113,7 @@ jobs:
               echo "Auto-commit attempt #$i"
               git pull origin "${GITHUB_REF#refs/heads/}" || true
               git add *.json
-              git commit -m "Auto-commit merged translation cache for languages: ${{ inputs.languages }}" || echo "Nothing to commit"
+              git commit -m "Auto-commit merged translation cache for language: $LANG" || echo "Nothing to commit"
               if git push origin "${GITHUB_REF#refs/heads/}"; then
                 echo "Auto-commit push successful"
                 exit 0
@@ -123,47 +126,45 @@ jobs:
             exit 1
           ) &
 
-      - name: Run AST Translation for Family ${{ matrix.family }}
+      - name: Run AST Translation for Family ${{ matrix.family }} and Language ${{ matrix.language }}
         run: |
-          echo "Translating for subdomain: ${{ inputs.subdomain }}, family: ${{ matrix.family }}, languages: ${{ inputs.languages }}"
-          # Construct the input path based on subdomain, family, and language folder (here assumed to be 'en')
+          echo "Translating for subdomain: ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: ${{ matrix.language }}"
+          # Construct the input path assuming the source content is under the English folder ("en")
           INPUT_PATH="aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}/en"
           python aspose-net/scripts/ast-translator/ast-translator.py \
             --input "$INPUT_PATH" \
             --cache_folder aspose-net/translation \
             --device auto \
-            --target_languages "${{ inputs.languages }}" \
+            --target_languages "${{ matrix.language }}" \
             --batch_size 8
 
       - name: Final Merge and Push Updated Translation Cache
         env:
           GIT_AUTHOR_NAME: GitHub Actions
           GIT_AUTHOR_EMAIL: actions@github.com
-          GITHUB_TOKEN: ${{ secrets.PPAT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
         run: |
           #!/bin/bash
           set -e
-          echo "Final merge and push process starting..."
-          for lang in $(echo "${{ inputs.languages }}" | tr ',' ' '); do
-            echo "Processing language $lang"
-            LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
-            REMOTE_FILE="translationcache/${lang}_cache.json"
-            if [ ! -s "$LOCAL_FILE" ]; then
-              echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $lang."
-              continue
-            fi
-            if [ ! -f "$REMOTE_FILE" ]; then
-              echo "{}" > "$REMOTE_FILE"
-            fi
-            python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-          done
+          LANG="${{ matrix.language }}"
+          echo "Final merge and push process starting for language: $LANG"
+          LOCAL_FILE="aspose-net/translation/${LANG}_cache.json"
+          REMOTE_FILE="translationcache/${LANG}_cache.json"
+          if [ ! -s "$LOCAL_FILE" ]; then
+            echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $LANG."
+            exit 0
+          fi
+          if [ ! -f "$REMOTE_FILE" ]; then
+            echo "{}" > "$REMOTE_FILE"
+          fi
+          python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
           python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
           cd translationcache
           for i in {1..10}; do
             echo "Final commit attempt #$i"
             git pull origin "${GITHUB_REF#refs/heads/}" || true
             git add *.json
-            git commit -m "Final commit merged translation cache for family: ${{ matrix.family }} and languages: ${{ inputs.languages }}" || echo "Nothing to commit"
+            git commit -m "Final commit merged translation cache for family: ${{ matrix.family }} and language: $LANG" || echo "Nothing to commit"
             if git push origin "${GITHUB_REF#refs/heads/}"; then
               echo "Final push successful"
               exit 0
