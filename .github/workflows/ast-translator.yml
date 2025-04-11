@@ -105,8 +105,9 @@ jobs:
             if [ ! -f "$REMOTE_FILE" ]; then
               echo "{}" > "$REMOTE_FILE"
             fi
-            python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-            python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
+            python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+            # Also call validate.py (if that is your file) instead of validate_and_fix_json.py
+            python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --fix
             cd translationcache
             # Retry pull-commit-push loop up to 10 times.
             for i in {1..10}; do
@@ -136,7 +137,8 @@ jobs:
             --cache_folder aspose-net/translation \
             --device auto \
             --target_languages "${{ matrix.language }}" \
-            --batch_size 8
+            --batch_size 6 \
+            --existing_cache_folder translationcache
 
       - name: Final Merge and Push Updated Translation Cache
         env:
@@ -157,8 +159,9 @@ jobs:
           if [ ! -f "$REMOTE_FILE" ]; then
             echo "{}" > "$REMOTE_FILE"
           fi
-          python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-          python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
+          # Again, using merge.py and validate.py:
+          python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+          python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --recursive --fix
           cd translationcache
           for i in {1..10}; do
             echo "Final commit attempt #$i"
