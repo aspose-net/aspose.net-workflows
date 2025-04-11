@@ -20,12 +20,12 @@ jobs:
           pip install google-api-python-client google-auth google-auth-oauthlib google-auth-httplib2 requests
 
       - name: Prepare batches
-        run: python scripts/sitemap_parser.py 
+        run: python scripts/gsc/sitemap_parser.py 
 
       - name: Submit batches to Google
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-        run: python scripts/batch_submitter.py
+        run: python scripts/gsc/batch_submitter.py
 
       - name: Commit changes
         run: |

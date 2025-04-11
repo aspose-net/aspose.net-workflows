@@ -25,4 +25,4 @@ jobs:
       env:
         GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
       run: |
-        python scripts/sitemap_submission_google.py
+        python scripts/gsc/sitemap_submission_google.py
