@@ -22,7 +22,9 @@ jobs:
     timeout-minutes: 360  # Maximum runtime of 6 hours
     strategy:
       matrix:
-        family: ${{ split(github.event.inputs.families, ',') }}
+        # Convert the comma-separated string into a JSON array.
+        # Example: "words,cells,barcode" becomes ["words","cells","barcode"]
+        family: ${{ fromJson('["' + replace(github.event.inputs.families, ',', '","') + '"]') }}
     steps:
       - name: Checkout aspose.net repository
         uses: actions/checkout@v3
@@ -60,7 +62,6 @@ jobs:
           COMMIT_BUFFER=1800
           SLEEP_DURATION=$(( MAX_RUNTIME - COMMIT_BUFFER ))
           echo "Auto-commit will trigger in $SLEEP_DURATION seconds."
-          # Inline auto-commit logic running in the background.
           (
             sleep $SLEEP_DURATION
             echo "Auto-commit triggered; performing merge and push..."
@@ -69,9 +70,10 @@ jobs:
               echo "Processing language $lang"
               LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
               REMOTE_FILE="translationcache/${lang}_cache.json"
-              # Ensure local temporary file exists.
-              if [ ! -f "$LOCAL_FILE" ]; then
-                echo "{}" > "$LOCAL_FILE"
+              # If the local cache file is empty, skip merging and pushing for this language.
+              if [ ! -s "$LOCAL_FILE" ]; then
+                echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $lang."
+                continue
               fi
               # Ensure remote cache file exists.
               if [ ! -f "$REMOTE_FILE" ]; then
@@ -100,11 +102,11 @@ jobs:
             echo "Auto-commit push failed after multiple attempts"
             exit 1
           ) &
-      
+
       - name: Run AST Translation for Family ${{ matrix.family }}
         run: |
           echo "Translating for subdomain: ${{ github.event.inputs.subdomain }}, family: ${{ matrix.family }}, languages: ${{ github.event.inputs.languages }}"
-          # Construct input path using Linux-style paths in the aspose.net repo.
+          # Construct input path using Linux-style paths in the aspose.net repository.
           INPUT_PATH="aspose-net/ast/${{ github.event.inputs.subdomain }}/${{ matrix.family }}/en"
           python aspose-net/scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder aspose-net/translation --device cuda --target_languages "${{ github.event.inputs.languages }}" --batch_size 12
 
@@ -121,8 +123,10 @@ jobs:
             echo "Processing language $lang"
             LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
             REMOTE_FILE="translationcache/${lang}_cache.json"
-            if [ ! -f "$LOCAL_FILE" ]; then
-              echo "{}" > "$LOCAL_FILE"
+            # If the local cache file is empty, skip merging and pushing for this language.
+            if [ ! -s "$LOCAL_FILE" ]; then
+              echo "Local cache file $LOCAL_FILE is empty. Skipping merge for language $lang."
+              continue
             fi
             if [ ! -f "$REMOTE_FILE" ]; then
               echo "{}" > "$REMOTE_FILE"
