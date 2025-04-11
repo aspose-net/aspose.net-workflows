@@ -22,11 +22,14 @@ jobs:
     timeout-minutes: 360  # Maximum runtime of 6 hours
     strategy:
       matrix:
-        family: ${{ fromJson('["' + replace(github.event.inputs.families, ',', '","') + '"]') }}
+        family: ${{ split(github.event.inputs.families, ',') }}
     steps:
       - name: Checkout aspose.net repository
         uses: actions/checkout@v3
         with:
+          repository: Aspose/aspose.net
+          path: aspose-net
+          token: ${{ secrets.REPO_TOKEN }}
           fetch-depth: 0
 
       - name: Checkout translationcache repository
@@ -34,7 +37,8 @@ jobs:
         with:
           repository: smallize/translationcache
           path: translationcache
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_TOKEN }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -44,43 +48,42 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r aspose-net/requirements.txt
 
       - name: Start auto-commit watchdog for translationcache
         run: |
           #!/bin/bash
           set -e
           # Maximum runtime: 21600 seconds (6 hours)
-          MAX_RUNTIME=21600          
+          MAX_RUNTIME=21600
           # Trigger auto-commit 30 minutes (1800 seconds) before timeout.
-          COMMIT_BUFFER=1800         
+          COMMIT_BUFFER=1800
           SLEEP_DURATION=$(( MAX_RUNTIME - COMMIT_BUFFER ))
           echo "Auto-commit will trigger in $SLEEP_DURATION seconds."
           # Inline auto-commit logic running in the background.
           (
             sleep $SLEEP_DURATION
             echo "Auto-commit triggered; performing merge and push..."
-            # For each target language specified in the workflow input:
+            # Process each target language specified in the workflow input.
             for lang in $(echo "${{ github.event.inputs.languages }}" | tr ',' ' '); do
               echo "Processing language $lang"
-              LOCAL_FILE="./translation/${lang}_cache.json"
-              REMOTE_FILE="./translationcache/${lang}_cache.json"
-              # If the local temporary file doesn't exist, create an empty JSON object.
+              LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
+              REMOTE_FILE="translationcache/${lang}_cache.json"
+              # Ensure local temporary file exists.
               if [ ! -f "$LOCAL_FILE" ]; then
                 echo "{}" > "$LOCAL_FILE"
               fi
-              # Similarly, if the remote file is missing, initialize it.
+              # Ensure remote cache file exists.
               if [ ! -f "$REMOTE_FILE" ]; then
                 echo "{}" > "$REMOTE_FILE"
               fi
-              # Merge local and remote cache JSON files using your merger script.
-              python scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+              # Merge local and remote cache JSON files using the merger script.
+              python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
             done
-            # Validate and (if needed) fix the merged JSON files.
-            python scripts/json-merger/validate_and_fix_json.py --folder "./translationcache" --recursive --fix
-            # Switch directory into the translationcache repo.
+            # Validate (and fix if needed) the merged JSON files.
+            python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
             cd translationcache
-            # Try up to 10 times to pull, commit, and push.
+            # Retry pull-commit-push loop up to 10 times.
             for i in {1..10}; do
               echo "Auto-commit attempt #$i"
               git pull origin "${GITHUB_REF#refs/heads/}" || true
@@ -97,36 +100,36 @@ jobs:
             echo "Auto-commit push failed after multiple attempts"
             exit 1
           ) &
-
+      
       - name: Run AST Translation for Family ${{ matrix.family }}
         run: |
           echo "Translating for subdomain: ${{ github.event.inputs.subdomain }}, family: ${{ matrix.family }}, languages: ${{ github.event.inputs.languages }}"
-          # Construct the input path using Linux-style paths.
-          INPUT_PATH="./ast/${{ github.event.inputs.subdomain }}/${{ matrix.family }}/en"
-          python scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder ./translation --device cuda --target_languages "${{ github.event.inputs.languages }}" --batch_size 12
+          # Construct input path using Linux-style paths in the aspose.net repo.
+          INPUT_PATH="aspose-net/ast/${{ github.event.inputs.subdomain }}/${{ matrix.family }}/en"
+          python aspose-net/scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder aspose-net/translation --device cuda --target_languages "${{ github.event.inputs.languages }}" --batch_size 12
 
       - name: Final Merge and Push Updated Translation Cache
         env:
           GIT_AUTHOR_NAME: GitHub Actions
           GIT_AUTHOR_EMAIL: actions@github.com
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PPAT_TOKEN }}
         run: |
           #!/bin/bash
           set -e
           echo "Final merge and push process starting..."
           for lang in $(echo "${{ github.event.inputs.languages }}" | tr ',' ' '); do
             echo "Processing language $lang"
-            LOCAL_FILE="./translation/${lang}_cache.json"
-            REMOTE_FILE="./translationcache/${lang}_cache.json"
+            LOCAL_FILE="aspose-net/translation/${lang}_cache.json"
+            REMOTE_FILE="translationcache/${lang}_cache.json"
             if [ ! -f "$LOCAL_FILE" ]; then
               echo "{}" > "$LOCAL_FILE"
             fi
             if [ ! -f "$REMOTE_FILE" ]; then
               echo "{}" > "$REMOTE_FILE"
             fi
-            python scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+            python aspose-net/scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
           done
-          python scripts/json-merger/validate_and_fix_json.py --folder "./translationcache" --recursive --fix
+          python aspose-net/scripts/json-merger/validate_and_fix_json.py --folder "translationcache" --recursive --fix
           cd translationcache
           for i in {1..10}; do
             echo "Final commit attempt #$i"
