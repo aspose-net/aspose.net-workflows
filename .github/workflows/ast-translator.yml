@@ -24,7 +24,7 @@ jobs:
       matrix:
         # Convert the comma-separated string into a JSON array.
         # Example: "words,cells,barcode" becomes ["words","cells","barcode"]
-        family: ${{ fromJson('["' + replace(github.event.inputs.families, ',', '","') + '"]') }}
+        family: ${{ fromJson(concat('["', replace(github.event.inputs.families, ',', '","'), '"]')) }}
     steps:
       - name: Checkout aspose.net repository
         uses: actions/checkout@v3
@@ -50,7 +50,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r aspose-net/requirements.txt
+          pip install torch transformers sentencepiece
 
       - name: Start auto-commit watchdog for translationcache
         run: |
@@ -108,7 +108,7 @@ jobs:
           echo "Translating for subdomain: ${{ github.event.inputs.subdomain }}, family: ${{ matrix.family }}, languages: ${{ github.event.inputs.languages }}"
           # Construct input path using Linux-style paths in the aspose.net repository.
           INPUT_PATH="aspose-net/ast/${{ github.event.inputs.subdomain }}/${{ matrix.family }}/en"
-          python aspose-net/scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder aspose-net/translation --device cuda --target_languages "${{ github.event.inputs.languages }}" --batch_size 12
+          python aspose-net/scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder aspose-net/translation --device auto --target_languages "${{ github.event.inputs.languages }}" --batch_size 8
 
       - name: Final Merge and Push Updated Translation Cache
         env:
