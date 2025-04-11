@@ -81,6 +81,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch transformers sentencepiece
 
+      - name: Configure Git Identity
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
       - name: Start auto-commit watchdog for translationcache
         run: |
           #!/bin/bash
@@ -106,7 +111,6 @@ jobs:
               echo "{}" > "$REMOTE_FILE"
             fi
             python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-            # Also call validate.py (if that is your file) instead of validate_and_fix_json.py
             python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --fix
             cd translationcache
             # Retry pull-commit-push loop up to 10 times.
@@ -159,10 +163,10 @@ jobs:
           if [ ! -f "$REMOTE_FILE" ]; then
             echo "{}" > "$REMOTE_FILE"
           fi
-          # Again, using merge.py and validate.py:
           python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
           python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --recursive --fix
           cd translationcache
+          # Retry pull-commit-push loop up to 10 times.
           for i in {1..10}; do
             echo "Final commit attempt #$i"
             git pull origin "${GITHUB_REF#refs/heads/}" || true
