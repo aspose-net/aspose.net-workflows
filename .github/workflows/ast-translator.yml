@@ -110,8 +110,17 @@ jobs:
             if [ ! -f "$REMOTE_FILE" ]; then
               echo "{}" > "$REMOTE_FILE"
             fi
+            # Print counts before merging:
+            echo "Before merge:"
+            echo "Local cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$LOCAL_FILE")"
+            echo "Remote cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REMOTE_FILE")"
+
+            # Run merge (note: merge.py now also prints counts)
             python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
             python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --fix
+            # Print counts after merging:
+            echo "After merge:"
+            echo "Remote cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REMOTE_FILE")"
             cd translationcache
             # Retry pull-commit-push loop up to 10 times.
             for i in {1..10}; do
@@ -163,8 +172,16 @@ jobs:
           if [ ! -f "$REMOTE_FILE" ]; then
             echo "{}" > "$REMOTE_FILE"
           fi
-          python aspose-net/scripts/json-merger/merge.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
-          python aspose-net/scripts/json-merger/validate.py --folder "translationcache" --recursive --fix
+          # Print counts before merging:
+          echo "Before merge:"
+          echo "Local cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$LOCAL_FILE")"
+          echo "Remote cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REMOTE_FILE")"
+
+          python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
+          python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE"  --fix
+          # Print counts after merging:
+          echo "After merge:"
+          echo "Remote cache count: $(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$REMOTE_FILE")"
           cd translationcache
           # Retry pull-commit-push loop up to 10 times.
           for i in {1..10}; do
