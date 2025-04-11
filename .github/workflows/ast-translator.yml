@@ -1,0 +1,145 @@
+name: ast-translator
+
+on:
+  workflow_dispatch:
+    inputs:
+      subdomain:
+        description: 'Subdomain to process (e.g., reference.aspose.net)'
+        required: true
+        default: 'reference.aspose.net'
+      families:
+        description: 'Comma-separated list of families to process (e.g., words,cells,barcode)'
+        required: true
+        default: 'words,cells,barcode'
+      languages:
+        description: 'Comma-separated list of target languages (e.g., zh,es,fr)'
+        required: true
+        default: 'zh'
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # Maximum runtime of 6 hours
+    strategy:
+      matrix:
+        family: ${{ fromJson('["' + replace(github.event.inputs.families, ',', '","') + '"]') }}
+    steps:
+      - name: Checkout aspose.net repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout translationcache repository
+        uses: actions/checkout@v3
+        with:
+          repository: smallize/translationcache
+          path: translationcache
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start auto-commit watchdog for translationcache
+        run: |
+          #!/bin/bash
+          set -e
+          # Maximum runtime: 21600 seconds (6 hours)
+          MAX_RUNTIME=21600          
+          # Trigger auto-commit 30 minutes (1800 seconds) before timeout.
+          COMMIT_BUFFER=1800         
+          SLEEP_DURATION=$(( MAX_RUNTIME - COMMIT_BUFFER ))
+          echo "Auto-commit will trigger in $SLEEP_DURATION seconds."
+          # Inline auto-commit logic running in the background.
+          (
+            sleep $SLEEP_DURATION
+            echo "Auto-commit triggered; performing merge and push..."
+            # For each target language specified in the workflow input:
+            for lang in $(echo "${{ github.event.inputs.languages }}" | tr ',' ' '); do
+              echo "Processing language $lang"
+              LOCAL_FILE="./translation/${lang}_cache.json"
+              REMOTE_FILE="./translationcache/${lang}_cache.json"
+              # If the local temporary file doesn't exist, create an empty JSON object.
+              if [ ! -f "$LOCAL_FILE" ]; then
+                echo "{}" > "$LOCAL_FILE"
+              fi
+              # Similarly, if the remote file is missing, initialize it.
+              if [ ! -f "$REMOTE_FILE" ]; then
+                echo "{}" > "$REMOTE_FILE"
+              fi
+              # Merge local and remote cache JSON files using your merger script.
+              python scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+            done
+            # Validate and (if needed) fix the merged JSON files.
+            python scripts/json-merger/validate_and_fix_json.py --folder "./translationcache" --recursive --fix
+            # Switch directory into the translationcache repo.
+            cd translationcache
+            # Try up to 10 times to pull, commit, and push.
+            for i in {1..10}; do
+              echo "Auto-commit attempt #$i"
+              git pull origin "${GITHUB_REF#refs/heads/}" || true
+              git add *.json
+              git commit -m "Auto-commit merged translation cache for languages: ${{ github.event.inputs.languages }}" || echo "Nothing to commit"
+              if git push origin "${GITHUB_REF#refs/heads/}"; then
+                echo "Auto-commit push successful"
+                exit 0
+              else
+                echo "Push failed, retrying in 5 seconds..."
+                sleep 5
+              fi
+            done
+            echo "Auto-commit push failed after multiple attempts"
+            exit 1
+          ) &
+
+      - name: Run AST Translation for Family ${{ matrix.family }}
+        run: |
+          echo "Translating for subdomain: ${{ github.event.inputs.subdomain }}, family: ${{ matrix.family }}, languages: ${{ github.event.inputs.languages }}"
+          # Construct the input path using Linux-style paths.
+          INPUT_PATH="./ast/${{ github.event.inputs.subdomain }}/${{ matrix.family }}/en"
+          python scripts/ast-translator/ast-translator.py --input "$INPUT_PATH" --cache_folder ./translation --device cuda --target_languages "${{ github.event.inputs.languages }}" --batch_size 12
+
+      - name: Final Merge and Push Updated Translation Cache
+        env:
+          GIT_AUTHOR_NAME: GitHub Actions
+          GIT_AUTHOR_EMAIL: actions@github.com
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          #!/bin/bash
+          set -e
+          echo "Final merge and push process starting..."
+          for lang in $(echo "${{ github.event.inputs.languages }}" | tr ',' ' '); do
+            echo "Processing language $lang"
+            LOCAL_FILE="./translation/${lang}_cache.json"
+            REMOTE_FILE="./translationcache/${lang}_cache.json"
+            if [ ! -f "$LOCAL_FILE" ]; then
+              echo "{}" > "$LOCAL_FILE"
+            fi
+            if [ ! -f "$REMOTE_FILE" ]; then
+              echo "{}" > "$REMOTE_FILE"
+            fi
+            python scripts/json-merger/merger.py --input1 "$LOCAL_FILE" --input2 "$REMOTE_FILE" --output "$REMOTE_FILE"
+          done
+          python scripts/json-merger/validate_and_fix_json.py --folder "./translationcache" --recursive --fix
+          cd translationcache
+          for i in {1..10}; do
+            echo "Final commit attempt #$i"
+            git pull origin "${GITHUB_REF#refs/heads/}" || true
+            git add *.json
+            git commit -m "Final commit merged translation cache for family: ${{ matrix.family }} and languages: ${{ github.event.inputs.languages }}" || echo "Nothing to commit"
+            if git push origin "${GITHUB_REF#refs/heads/}"; then
+              echo "Final push successful"
+              exit 0
+            else
+              echo "Push failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+          echo "Final push failed after multiple attempts"
+          exit 1
