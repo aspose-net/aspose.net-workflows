@@ -14,7 +14,7 @@ on:
       languages:
         description: "Comma-separated list of target languages (e.g., zh,es,fr)"
         required: true
-        default: 'zh,es,fr,de'
+        default: 'de,es,fr,ja,ko,ru,zh,ar,it,pt,pl,fa,id,cs,vi,tr,th,sv,el,uk'
 
 jobs:
   prepare-matrix:
@@ -118,14 +118,13 @@ jobs:
             cd translationcache
             for attempt in {1..10}; do
               echo "Auto-commit attempt #$attempt"
-              # Reset local repo to the remote before trying to commit
               git fetch origin
               git reset --hard origin/"${GITHUB_REF#refs/heads/}"
-              # Merge remote and local cache files: remote values are merged with local changes
+              # Merge remote and local cache files again
               python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
               python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE" --fix
               git add *.json
-              git commit -m "Auto-commit cache for ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: ${{ matrix.language }}" || echo "Nothing to commit"
+              git commit -m "Auto-commit merged translation cache for language: $LANG" || echo "Nothing to commit"
               if git push origin "${GITHUB_REF#refs/heads/}"; then
                 echo "Auto-commit push successful"
                 exit 0
@@ -176,12 +175,12 @@ jobs:
             # Reset local translationcache repo to remote state
             git fetch origin
             git reset --hard origin/"${GITHUB_REF#refs/heads/}"
-            # Merge remote file with local changes (here remote file is updated with local file content)
+            # Merge remote file with local changes
             python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
             python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE" --fix
             cd translationcache
             git add *.json
-            git commit -m "Translation cache for ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: ${{ matrix.language }} || echo "Nothing to commit"
+            git commit -m "Translation cache for ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: $LANG" || echo "Nothing to commit"
             if git push origin "${GITHUB_REF#refs/heads/}"; then
               echo "Final push successful"
               exit 0
