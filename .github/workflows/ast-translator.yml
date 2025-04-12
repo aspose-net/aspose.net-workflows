@@ -27,7 +27,6 @@ jobs:
         id: set_matrix
         shell: bash
         run: |
-          # Split and trim families and languages inputs
           IFS=',' read -ra FAM_LIST <<< "${{ inputs.families }}"
           IFS=',' read -ra LANG_LIST <<< "${{ inputs.languages }}"
           elements=()
@@ -90,9 +89,7 @@ jobs:
         run: |
           #!/bin/bash
           set -e
-          # Maximum runtime: 21600 seconds (6 hours)
           MAX_RUNTIME=21600
-          # Trigger auto-commit 30 minutes (1800 seconds) before timeout.
           COMMIT_BUFFER=1800
           SLEEP_DURATION=$(( MAX_RUNTIME - COMMIT_BUFFER ))
           echo "Auto-commit will trigger in $SLEEP_DURATION seconds."
@@ -110,27 +107,30 @@ jobs:
             if [ ! -f "$REMOTE_FILE" ]; then
               echo "{}" > "$REMOTE_FILE"
             fi
-
-            # Merge remote and local cache files: remote values are merged with local changes
+            # Merge remote (in translationcache) and local (in aspose-net)
             python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
             python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE" --fix
 
+            # Now switch into translationcache directory for git operations.
             cd translationcache
             for attempt in {1..10}; do
               echo "Auto-commit attempt #$attempt"
               git fetch origin
               git reset --hard origin/"${GITHUB_REF#refs/heads/}"
-              # Merge remote and local cache files again
-              python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
-              python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE" --fix
+              cd ..
+              python aspose-net/scripts/json-merger/merge.py --input1 "translationcache/${LANG}_cache.json" --input2 "aspose-net/translation/${LANG}_cache.json" --output "translationcache/${LANG}_cache.json"
+              python aspose-net/scripts/json-merger/validate.py --file "translationcache/${LANG}_cache.json" --fix
+              cd translationcache
               git add *.json
-              git commit -m "Auto-commit merged translation cache for language: $LANG" || echo "Nothing to commit"
+              commit_message="Auto-commit merged translation cache for language: $LANG"
+              git commit -m "$commit_message" || echo "Nothing to commit"
               if git push origin "${GITHUB_REF#refs/heads/}"; then
                 echo "Auto-commit push successful"
                 exit 0
               else
                 echo "Push failed, retrying in 5 seconds..."
                 sleep 5
+                # Stay in translationcache directory for next iteration.
               fi
             done
             echo "Auto-commit push failed after multiple attempts"
@@ -140,7 +140,6 @@ jobs:
       - name: Run AST Translation for Family ${{ matrix.family }} and Language ${{ matrix.language }}
         run: |
           echo "Translating for subdomain: ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: ${{ matrix.language }}"
-          # Construct the input path assuming the source content is under the English folder ("en")
           INPUT_PATH="aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}/en"
           python aspose-net/scripts/ast-translator/ast-translator.py \
             --input "$INPUT_PATH" \
@@ -169,24 +168,28 @@ jobs:
           if [ ! -f "$REMOTE_FILE" ]; then
             echo "{}" > "$REMOTE_FILE"
           fi
-
+          
           for attempt in {1..10}; do
             echo "Final commit attempt #$attempt"
-            # Reset local translationcache repo to remote state
+            # Change into the translationcache directory (git repository)
+            cd translationcache
             git fetch origin
             git reset --hard origin/"${GITHUB_REF#refs/heads/}"
-            # Merge remote file with local changes
+            cd ..
+            # Merge remote cache (in translationcache) with local cache (in aspose-net)
             python aspose-net/scripts/json-merger/merge.py --input1 "$REMOTE_FILE" --input2 "$LOCAL_FILE" --output "$REMOTE_FILE"
             python aspose-net/scripts/json-merger/validate.py --file "$REMOTE_FILE" --fix
             cd translationcache
             git add *.json
-            git commit -m "Translation cache for ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: $LANG" || echo "Nothing to commit"
+            commit_message="Translation cache for ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: $LANG"
+            git commit -m "$commit_message" || echo "Nothing to commit"
             if git push origin "${GITHUB_REF#refs/heads/}"; then
               echo "Final push successful"
               exit 0
             else
               echo "Push failed, retrying in 5 seconds..."
               sleep 5
+              cd ..
             fi
           done
           echo "Final push failed after multiple attempts"
