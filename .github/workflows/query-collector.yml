@@ -30,7 +30,8 @@ jobs:
       - name: Checkout destination repository
         uses: actions/checkout@v3
         with:
-          repository: aspose/aspose.net
+          # Updated repository location – note the correct casing for the organization
+          repository: Aspose/aspose.net
           token: ${{ secrets.REPO_TOKEN }}
           path: destination_repo
 
@@ -43,6 +44,8 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          # Explicitly update remote URL in case of caching
+          git remote set-url origin https://github.com/Aspose/aspose.net.git
           # Pull latest changes to avoid conflicts
           git pull --rebase --autostash origin main
           git add keywords/
