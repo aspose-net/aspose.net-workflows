@@ -1,0 +1,98 @@
+name: AST to MD Converter
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_language:
+        description: "Target language for Markdown (e.g., es,fr,zh)"
+        required: true
+        default: "de,es,fr,ja,ko,ru,zh,ar,it,pt,pl,fa,id,cs,vi,tr,th,sv,el,uk"
+      ast_folder:
+        description: "Path to the AST JSON folder (passed from AST Creator)"
+        required: true
+        default: "./ast"
+      content_folder:
+        description: "Path to the Content folder for Markdown output (passed from AST Creator)"
+        required: true
+        default: "./content"
+      store_json:
+        description: "Store translated AST JSON files alongside Markdown (true/false)"
+        required: false
+        default: "false"
+      parallel_languages:
+        description: "Process multiple target languages concurrently (true/false)"
+        required: false
+        default: "false"
+      max_extract_workers:
+        description: "Number of threads for file extraction"
+        required: false
+        default: "8"
+      cache_folder:
+        description: "Folder for translation cache files"
+        required: false
+        default: "translation_cache"
+  workflow_call:
+    inputs:
+      target_language:
+        required: true
+        type: string
+      ast_folder:
+        required: true
+        type: string
+      content_folder:
+        required: true
+        type: string
+      store_json:
+        required: false
+        type: string
+        default: "false"
+      parallel_languages:
+        required: false
+        type: string
+        default: "false"
+      max_extract_workers:
+        required: false
+        type: string
+        default: "8"
+      cache_folder:
+        required: false
+        type: string
+        default: "translation_cache"
+    secrets:
+      REPO_TOKEN:
+        required: true
+
+jobs:
+  generate_markdown:
+    name: Generate Markdown Files from AST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout aspose/aspose.net Repository
+        uses: actions/checkout@v3
+        with:
+          repository: Aspose/aspose.net
+          token: ${{ secrets.REPO_TOKEN }}
+          fetch-depth: 0
+
+      - name: Run MD Creator Script
+        run: |
+          # Build the command to run md-creator.py with the provided parameters.
+          CMD="python md-creator.py --input \"${{ inputs.ast_folder }}\" --target_language \"${{ inputs.target_language }}\" --output_base \"${{ inputs.content_folder }}\" --max_extract_workers \"${{ inputs.max_extract_workers }}\" --cache_folder \"${{ inputs.cache_folder }}\""
+          if [ "${{ inputs.store_json }}" = "true" ]; then
+            CMD+=" --store-json"
+          fi
+          if [ "${{ inputs.parallel_languages }}" = "true" ]; then
+            CMD+=" --parallel_languages"
+          fi
+          echo "Running command: $CMD"
+          eval $CMD
+
+      - name: Commit and Push Markdown Changes
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git commit -m "MD Creator: Updated markdown files for target language ${{ inputs.target_language }}" || echo "No changes to commit"
+          git push origin HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}

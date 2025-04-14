@@ -1,0 +1,46 @@
+name: AST Creator
+
+on:
+  workflow_dispatch:
+    inputs:
+      subdomain:
+        description: "Target subdomain (e.g., reference.aspose.net or kb.aspose.net)"
+        required: true
+        default: "reference.aspose.net"
+      families:
+        description: "Comma-separated list of families (e.g., words,cells,barcode)"
+        required: true
+        default: "words,cells,barcode"
+  workflow_call:
+    inputs:
+      subdomain:
+        required: true
+        type: string
+      families:
+        required: true
+        type: string
+    secrets:
+      REPO_TOKEN:
+        required: true
+
+jobs:
+  create_ast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout aspose/aspose.net Repository
+        uses: actions/checkout@v3
+        with:
+          repository: Aspose/aspose.net
+          token: ${{ secrets.REPO_TOKEN }}
+          fetch-depth: 0
+      - name: Run AST Creator Script
+        run: |
+          # Adjust the paths as needed.
+          python scripts/ast-translator/ast-creator.py \
+            --input "./content/${{ inputs.subdomain }}" \
+            --families "${{ inputs.families }}"
+      - name: Upload AST Files as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ast-files
+          path: ./ast
