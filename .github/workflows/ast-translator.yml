@@ -15,7 +15,20 @@ on:
         description: "Comma-separated list of target languages (e.g., zh,es,fr)"
         required: true
         default: 'de,es,fr,ja,ko,ru,zh,ar,it,pt,pl,fa,id,cs,vi,tr,th,sv,el,uk'
-
+  workflow_call:
+    inputs:
+      subdomain:
+        required: true
+        type: string
+      families:
+        required: true
+        type: string
+      languages:
+        required: true
+        type: string
+    secrets:
+      REPO_TOKEN:
+        required: true
 jobs:
   prepare-matrix:
     name: Prepare Family-Language Matrix
