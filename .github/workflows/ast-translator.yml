@@ -213,14 +213,3 @@ jobs:
           done
           echo "Final push failed after multiple attempts."
           exit 1
-
-      - name: Check for Watchdog Trigger
-        shell: bash
-        run: |
-          if [ -f .watchdog_triggered ]; then
-            echo "Watchdog was triggered. Translation was incomplete. Consider triggering a new job run with the same parameters."
-            echo "watchdog_triggered=true" >> $GITHUB_OUTPUT
-          else
-            echo "Watchdog was not triggered. Translation completed within the allotted time."
-            echo "watchdog_triggered=false" >> $GITHUB_OUTPUT
-          fi

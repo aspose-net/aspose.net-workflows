@@ -33,12 +33,22 @@ jobs:
           repository: Aspose/aspose.net
           token: ${{ secrets.REPO_TOKEN }}
           fetch-depth: 0
+
       - name: Run AST Creator Script
         run: |
-          # Adjust the paths as needed.
-          python scripts/ast-translator/ast-creator.py \
-            --input "./content/${{ inputs.subdomain }}" \
-            --families "${{ inputs.families }}"
+          python scripts/ast-translator/ast-creator.py --input "./content/${{ inputs.subdomain }}" --families "${{ inputs.families }}"
+
+      - name: Commit and Push AST JSON Files
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          # Try up to 5 times to commit and push JSON files to handle merge conflicts gracefully.
+          for i in {1..5}; do
+              git add ./ast/**/*.json
+              git commit -m "AST Creator: Updated JSON files for subdomain ${{ inputs.subdomain }}" && break || (echo "Commit attempt $i failed, retrying..."; sleep 5)
+          done
+          git push origin HEAD
+
       - name: Upload AST Files as Artifact
         uses: actions/upload-artifact@v3
         with:
