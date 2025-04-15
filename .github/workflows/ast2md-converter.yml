@@ -39,21 +39,25 @@ jobs:
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
           token: ${{ secrets.REPO_TOKEN }}
-          workflow: ast-creator.yml
-          ref: HEAD
-          inputs: |
-            subdomain: ${{ inputs.subdomain }}
-            families: ${{ inputs.families }}
+          repository: ${{ github.repository }}
+          event-type: trigger-ast-creator
+          client-payload: |
+            {
+              "subdomain": "${{ inputs.subdomain }}",
+              "families": "${{ inputs.families }}"
+            }
       - name: Trigger AST Translator Workflow
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
           token: ${{ secrets.REPO_TOKEN }}
-          workflow: ast-translator.yml
-          ref: HEAD
-          inputs: |
-            subdomain: ${{ inputs.subdomain }}
-            families: ${{ inputs.families }}
-            languages: ${{ inputs.target_language }}
+          repository: ${{ github.repository }}
+          event-type: trigger-ast-translator
+          client-payload: |
+            {
+              "subdomain": "${{ inputs.subdomain }}",
+              "families": "${{ inputs.families }}",
+              "languages": "${{ inputs.target_language }}"
+            }
 
   generate_markdown:
     name: Generate Markdown Files from AST
@@ -77,7 +81,6 @@ jobs:
 
       - name: Run MD Creator Script
         run: |
-          # Using the GITHUB_WORKSPACE environment variable to generate an absolute path for the cache folder.
           python ast2md-converter.py --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
 
       - name: Commit and Push Markdown Changes
