@@ -64,12 +64,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-dependencies
     steps:
-      - name: Checkout aspose/aspose.net Repository
+      - name: Checkout Aspose/aspose.net Repository
         uses: actions/checkout@v3
         with:
           repository: Aspose/aspose.net
           token: ${{ secrets.REPO_TOKEN }}
           fetch-depth: 0
+          path: aspose.net
 
       - name: Checkout Translation Cache Repository
         uses: actions/checkout@v3
