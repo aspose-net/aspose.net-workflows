@@ -38,6 +38,7 @@ jobs:
       - name: Trigger AST Creator Workflow
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
+          token: ${{ secrets.REPO_TOKEN }}
           workflow: ast-creator.yml
           ref: HEAD
           inputs: |
@@ -46,6 +47,7 @@ jobs:
       - name: Trigger AST Translator Workflow
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
+          token: ${{ secrets.REPO_TOKEN }}
           workflow: ast-translator.yml
           ref: HEAD
           inputs: |
@@ -58,17 +60,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-dependencies
     steps:
-      - name: Checkout Repository
+      - name: Checkout aspose/aspose.net Repository
         uses: actions/checkout@v3
         with:
           repository: Aspose/aspose.net
           token: ${{ secrets.REPO_TOKEN }}
           fetch-depth: 0
 
+      - name: Checkout Translation Cache Repository
+        uses: actions/checkout@v3
+        with:
+          repository: smallize/translationcache
+          token: ${{ secrets.REPO_TOKEN }}
+          fetch-depth: 0
+          path: translationcache
+
       - name: Run MD Creator Script
         run: |
-          # The script will use built‑in defaults for ast folder, output folder, cache, etc.
-          python ast2md-converter.py --target_language "${{ inputs.target_language }}"
+          # Using the GITHUB_WORKSPACE environment variable to generate an absolute path for the cache folder.
+          python ast2md-converter.py --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
 
       - name: Commit and Push Markdown Changes
         run: |
