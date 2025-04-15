@@ -83,7 +83,8 @@ jobs:
       - name: Run MD Creator Script
         run: |
           cd aspose.net
-          python scripts/ast-translator/ast2md-converter.py --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
+          # Assuming AST JSON files are in aspose.net/ast, supply that as --input.
+          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
 
       - name: Commit and Push Markdown Changes
         run: |
