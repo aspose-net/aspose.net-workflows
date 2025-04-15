@@ -81,7 +81,7 @@ jobs:
 
       - name: Run MD Creator Script
         run: |
-          python ast2md-converter.py --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
+          python aspose.net/scripts/ast-translator/ast2md-converter.py --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache"
 
       - name: Commit and Push Markdown Changes
         run: |
