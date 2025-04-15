@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger AST Creator Workflow
-        uses: peter-evans/workflow-dispatch@v1
+        uses: peter-evans/repository-dispatch@v3.0.0
         with:
           workflow: ast-creator.yml
           ref: HEAD
@@ -44,7 +44,7 @@ jobs:
             subdomain: ${{ inputs.subdomain }}
             families: ${{ inputs.families }}
       - name: Trigger AST Translator Workflow
-        uses: peter-evans/workflow-dispatch@v1
+        uses: peter-evans/repository-dispatch@v3.0.0
         with:
           workflow: ast-translator.yml
           ref: HEAD
