@@ -2,63 +2,8 @@ name: AST2MD Converter
 
 on:
   workflow_dispatch:
-    inputs:
-      subdomain:
-        description: "Target subdomain (e.g., reference.aspose.net or kb.aspose.net)"
-        required: true
-        default: "reference.aspose.net"
-      families:
-        description: "Comma-separated list of families (e.g., words,cells,barcode)"
-        required: true
-        default: "words,cells,barcode"
-      target_language:
-        description: "Target language code(s) for Markdown conversion (e.g., es,fr,zh)"
-        required: true
-        default: "de,es,fr,ja,ko,ru,zh,ar,it,pt,pl,fa,id,cs,vi,tr,th,sv,el,uk"
-  workflow_call:
-    inputs:
-      subdomain:
-        required: true
-        type: string
-      families:
-        required: true
-        type: string
-      target_language:
-        required: true
-        type: string
-    secrets:
-      REPO_TOKEN:
-        required: true
 
 jobs:
-  run-dependencies:
-    name: Run Dependent Workflows (AST Creator & AST Translator)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger AST Creator Workflow
-        uses: peter-evans/repository-dispatch@v3.0.0
-        with:
-          token: ${{ secrets.REPO_TOKEN }}
-          repository: ${{ github.repository }}
-          event-type: trigger-ast-creator
-          client-payload: |
-            {
-              "subdomain": "${{ inputs.subdomain }}",
-              "families": "${{ inputs.families }}"
-            }
-      - name: Trigger AST Translator Workflow
-        uses: peter-evans/repository-dispatch@v3.0.0
-        with:
-          token: ${{ secrets.REPO_TOKEN }}
-          repository: ${{ github.repository }}
-          event-type: trigger-ast-translator
-          client-payload: |
-            {
-              "subdomain": "${{ inputs.subdomain }}",
-              "families": "${{ inputs.families }}",
-              "languages": "${{ inputs.target_language }}"
-            }
-
   generate_markdown:
     name: Generate Markdown Files from AST
     runs-on: ubuntu-latest
@@ -83,17 +28,15 @@ jobs:
       - name: Run MD Creator Script
         run: |
           cd aspose.net
-          # Assuming AST JSON files are in aspose.net/ast, adjust --input if needed.
-          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" --output_base content/${{ inputs.subdomain }}
+          python scripts/ast-translator/ast2md-converter.py --input ast --target_languages "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" 
 
       - name: Commit and Push Markdown Changes
         working-directory: aspose.net
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          # Stage all changes (tracked modifications + new/untracked files)
           git add -A
-          git commit -m "MD Creator: Updated markdown files for target language ${{ inputs.target_language }}" || echo "No changes to commit"
+          git commit -m "Translation Creator: Updated markdown files || echo "No changes to commit"
           git push origin HEAD
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
