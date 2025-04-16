@@ -84,14 +84,15 @@ jobs:
         run: |
           cd aspose.net
           # Assuming AST JSON files are in aspose.net/ast, adjust --input if needed.
-          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" --output_base content/${{ inputs.subdomain }} 
+          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" --output_base content/${{ inputs.subdomain }}
 
       - name: Commit and Push Markdown Changes
         working-directory: aspose.net
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          git add **/*.md
+          # Stage all changes (tracked modifications + new/untracked files)
+          git add -A
           git commit -m "MD Creator: Updated markdown files for target language ${{ inputs.target_language }}" || echo "No changes to commit"
           git push origin HEAD
         env:
