@@ -84,7 +84,7 @@ jobs:
         run: |
           cd aspose.net
           # Assuming AST JSON files are in aspose.net/ast, adjust --input if needed.
-          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" --output_base content/${{ inputs.subdomain }} --run_language_process 
+          python scripts/ast-translator/ast2md-converter.py --input ast --target_language "${{ inputs.target_language }}" --cache_folder "${GITHUB_WORKSPACE}/translationcache" --output_base content/${{ inputs.subdomain }} 
 
       - name: Commit and Push Markdown Changes
         working-directory: aspose.net
