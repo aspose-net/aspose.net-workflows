@@ -7,7 +7,6 @@ jobs:
   generate_markdown:
     name: Generate Markdown Files from AST
     runs-on: ubuntu-latest
-    needs: run-dependencies
     steps:
       - name: Checkout Aspose/aspose.net Repository
         uses: actions/checkout@v3
@@ -35,8 +34,14 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          git add -A
-          git commit -m "Translation Creator: Updated markdown files || echo "No changes to commit"
-          git push origin HEAD
+          # Only add markdown files in the "content" folder
+          git add -f content/*.md
+          # Check if there are changes to commit
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "Translation Creator: Updated markdown files"
+            git push origin HEAD
+          else
+            echo "No changes to commit"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
