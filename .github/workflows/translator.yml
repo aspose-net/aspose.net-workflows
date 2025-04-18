@@ -87,11 +87,11 @@ jobs:
 
       - name: Run AST Creator Script
         run: |
-          python aspose-net/scripts/ast-translator/ast-creator.py --input "./content/${{ inputs.subdomain }}" --family "${{ matrix.family }}"
+          python aspose-net/scripts/ast-translator/ast-creator.py --input "aspose-net/content/${{ inputs.subdomain }}" --family "${{ matrix.family }}"
 
       - name: Run AST Filter Script
         run: |
-          python aspose-net/scripts/ast-translator/ast-filter.py --input "./ast/${{ inputs.subdomain }}"
+          python aspose-net/scripts/ast-translator/ast-filter.py --input "aspose-net/ast/${{ inputs.subdomain }}"
 
       - name: Run AST Translation with Watchdog
         shell: bash
@@ -136,7 +136,6 @@ jobs:
           # Start the AST translation process in the background.
           echo "Starting AST translation for subdomain: ${{ inputs.subdomain }}, family: ${{ matrix.family }}, language: ${{ matrix.language }}..."
           python aspose-net/scripts/ast-translator/ast-translator.py \
-            --input "aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}/en" \
             --cache_folder aspose-net/translation \
             --device auto \
             --target_languages "${{ matrix.language }}" \
