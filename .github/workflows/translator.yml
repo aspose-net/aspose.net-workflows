@@ -10,7 +10,7 @@ on:
       families:
         description: "Comma-separated list of families to process (e.g., words,cells,barcode)"
         required: true
-        default: 'words,cells,barcode'
+        default: 'words,pdf,cells,imaging,barcode,tasks,ocr,html,zip,page,psd,tex'
       languages:
         description: "Comma-separated list of target languages (e.g., zh,es,fr)"
         required: true
