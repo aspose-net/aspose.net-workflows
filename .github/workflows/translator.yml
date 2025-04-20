@@ -91,7 +91,7 @@ jobs:
 
       - name: Run AST Filter Script
         run: |
-          python aspose-net/scripts/ast-translator/ast-filter.py --input "aspose-net/ast/${{ inputs.subdomain }}" --family "${{ matrix.family }}
+          python aspose-net/scripts/ast-translator/ast-filter.py --input "aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}"
 
       - name: Run AST Translation with Watchdog
         shell: bash
