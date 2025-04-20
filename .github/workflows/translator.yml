@@ -139,7 +139,7 @@ jobs:
             --cache_folder aspose-net/translation \
             --device auto \
             --target_languages "${{ matrix.language }}" \
-            --batch_size 10 \
+            --batch_size 6 \
             --existing_cache_folder translationcache &
           TRANSLATION_PID=$!
 
