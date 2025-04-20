@@ -209,7 +209,7 @@ jobs:
           exit 1
       - name: Run AST2MD Converter Script
         run: |
-          python aspose-net/scripts/ast-translator/ast2md-converter.py --input "aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}" target_language {{ matrix.language }}
+          python aspose-net/scripts/ast-translator/ast2md-converter.py --input "aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}" target_language ${{ matrix.language }} --cache_folder translationcache
 
       - name: Commit & Push Translated Markdown
         shell: bash
