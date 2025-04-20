@@ -43,7 +43,7 @@ jobs:
           echo "matrix=$json" >> $GITHUB_OUTPUT
 
   translate:
-    name: Translate AST Files
+    name: Translate Markdown Files
     needs: prepare-matrix
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -91,7 +91,7 @@ jobs:
 
       - name: Run AST Filter Script
         run: |
-          python aspose-net/scripts/ast-translator/ast-filter.py --input "aspose-net/ast/${{ inputs.subdomain }}"
+          python aspose-net/scripts/ast-translator/ast-filter.py --input "aspose-net/ast/${{ inputs.subdomain }}" --family "${{ matrix.family }}
 
       - name: Run AST Translation with Watchdog
         shell: bash
