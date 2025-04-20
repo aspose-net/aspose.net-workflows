@@ -87,7 +87,7 @@ jobs:
 
       - name: Run AST Creator Script
         run: |
-          python aspose-net/scripts/ast-translator/ast-creator.py --input "aspose-net/content/${{ inputs.subdomain }}" --family "${{ matrix.family }}"
+          python aspose-net/scripts/ast-translator/ast-creator.py --input "aspose-net/content/${{ inputs.subdomain }}/${{ matrix.family }}"
 
       - name: Run AST Filter Script
         run: |
