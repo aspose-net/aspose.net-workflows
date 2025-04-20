@@ -16,6 +16,11 @@ on:
         required: true
         default: 'de,es,fr,ja,ko,ru,zh,ar,it,pt,pl,fa,id,cs,vi,tr,th,sv,el,uk,he'
 
+permissions:
+  contents: write       # for committing back to Aspose repo
+  actions: read         # to fetch marketplace actions
+  artifacts: write      # to upload/download artifacts
+
 jobs:
   prepare-matrix:
     name: Prepare Family-Language Matrix
@@ -53,7 +58,6 @@ jobs:
         include: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     permissions:
       contents: write
-      actions: write    # <— allow upload-artifact
     steps:
       - name: Checkout aspose.net repository
         uses: actions/checkout@v3
@@ -99,7 +103,7 @@ jobs:
       - name: Run AST Translation with Watchdog
         shell: bash
         run: |
-          # (your existing watchdog logic here, unchanged)
+          # (existing watchdog logic unchanged)
           python aspose-net/scripts/ast-translator/ast-translator.py \
             --cache_folder aspose-net/translation \
             --device auto \
@@ -114,7 +118,7 @@ jobs:
           GIT_AUTHOR_EMAIL: actions@github.com
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
         run: |
-          # (your existing merge/push cache logic here, unchanged)
+          # (existing cache merge logic unchanged)
 
       - name: Run AST2MD Converter Script
         run: |
@@ -133,8 +137,10 @@ jobs:
     name: Merge & Push All Translations
     needs: translate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout aspose.net repository
+      - name: Checkout Aspose.net repository
         uses: actions/checkout@v3
         with:
           repository: Aspose/aspose.net
@@ -150,10 +156,10 @@ jobs:
       - name: Merge into content folder
         shell: bash
         run: |
-          SUB="${{ github.event.inputs.subdomain }}"
-          mkdir -p aspose-net/content/"$SUB"
+          SUBDOMAIN=${{ github.event.inputs.subdomain }}
+          mkdir -p aspose-net/content/"$SUBDOMAIN"
           for art in merged/*; do
-            cp -a "$art/." aspose-net/content/"$SUB"/
+            cp -a "$art/." aspose-net/content/"$SUBDOMAIN"/
           done
 
       - name: Commit & Push Merge
@@ -167,6 +173,6 @@ jobs:
             echo "No translation changes to commit."
             exit 0
           fi
-          git commit -m "Auto-translate ${{ github.event.inputs.subdomain }}: all families & languages"
+          git commit -m "Auto-translate ${{ github.event.inputs.subdomain }}: all families & langs"
           BRANCH=${GITHUB_REF#refs/heads/}
           git push origin HEAD:$BRANCH
