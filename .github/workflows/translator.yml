@@ -225,7 +225,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No content changes detected—skipping commit."
           else
-            git commit -m "Auto-translate ${{ inputs.subdomain } }: family=${{ matrix.family }}, lang=${{ matrix.language }}"
+            git commit -m "Auto-translate ${{ inputs.subdomain }}: family=${{ matrix.family }}, lang=${{ matrix.language }}"
             # push to the same branch the workflow is running on
             git push origin "${GITHUB_REF#refs/heads/}"
           fi
