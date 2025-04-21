@@ -207,27 +207,3 @@ jobs:
           done
           echo "Final push failed after multiple attempts."
           exit 1
-
-      - name: Run AST2MD Converter Script
-        run: |
-          python aspose-net/scripts/ast-translator/ast2md-converter.py --input "aspose-net/ast/${{ inputs.subdomain }}/${{ matrix.family }}" --target_language ${{ matrix.language }} --cache_folder translationcache
-
-      - name: Commit & Push Translated Markdown
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-        run: |
-          echo "Pushing translated .md for subdomain=${{ inputs.subdomain }}, family=${{ matrix.family }}, lang=${{ matrix.language }}"
-          cd aspose-net
-          git add content/${{ inputs.subdomain }}
-
-          if git diff --cached --quiet; then
-            echo "No changes—skipping commit & push."
-            exit 0
-          fi
-
-          git commit -m "Auto-translate ${{ inputs.subdomain }}: family=${{ matrix.family }}, lang=${{ matrix.language }}"
-          BRANCH=${GITHUB_REF#refs/heads/}
-          git fetch origin $BRANCH
-          git rebase origin/$BRANCH
-          git push --force-with-lease origin $BRANCH
