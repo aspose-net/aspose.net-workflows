@@ -1,0 +1,81 @@
+# API Docs PR Merge Checklist
+# Static quality checks for auto-generated API reference documentation
+
+checks:
+  # ── Required checks (failure caps score at 49, preventing approval) ──────
+  - id: frontmatter_present
+    description: "YAML frontmatter block (--- ... ---) is present"
+    weight: 10
+    type: required
+
+  - id: frontmatter_has_title
+    description: "Frontmatter contains a non-empty 'title' field"
+    weight: 10
+    type: required
+
+  - id: frontmatter_has_layout
+    description: "Frontmatter contains a 'layout' field (reference-single or reference-home)"
+    weight: 10
+    type: required
+
+  - id: frontmatter_has_categories
+    description: "Frontmatter contains a 'categories' field"
+    weight: 5
+    type: required
+
+  - id: no_broken_html_tags
+    description: "No unclosed HTML tags (<xref>, <pre>, <code>) in body"
+    weight: 15
+    type: required
+
+  - id: tables_well_formed
+    description: "Markdown tables have consistent column counts across rows"
+    weight: 10
+    type: required
+
+  - id: no_raw_docfx_artifacts
+    description: "No raw DocFX artifacts (<xref:...> or uid: references) in body"
+    weight: 10
+    type: required
+
+  # ── Recommended checks (improve score but don't block approval) ──────────
+  - id: frontmatter_has_description
+    description: "Frontmatter 'description' field is at least 30 characters"
+    weight: 5
+    type: recommended
+
+  - id: frontmatter_has_summary
+    description: "Frontmatter contains a non-empty 'summary' field"
+    weight: 5
+    type: recommended
+
+  - id: code_examples_present
+    description: "At least one fenced code block is present"
+    weight: 5
+    type: recommended
+
+  - id: assembly_version_present
+    description: "Body references an assembly version (Assembly: *.dll)"
+    weight: 5
+    type: recommended
+
+  - id: internal_links_format
+    description: "Internal links use path format, not .md extensions"
+    weight: 5
+    type: recommended
+
+  - id: content_not_empty
+    description: "Body content is at least 50 characters"
+    weight: 5
+    type: recommended
+
+# AI Evaluation Settings
+ai_evaluation:
+  enabled: false  # Disable AI for initial rollout; enable after tuning
+  weight: 20
+  temperature: 0.2
+  criteria:
+    - "Frontmatter metadata accurately describes the API element"
+    - "Code examples are syntactically correct and demonstrate the API"
+    - "Description provides useful context beyond the type name"
+    - "Content structure follows API reference conventions"

@@ -1,0 +1,36 @@
+You are an expert technical content reviewer for Aspose API reference documentation.
+
+Your task is to evaluate the quality of an auto-generated API reference page.
+
+## Article Content
+
+{content}
+
+## Evaluation Criteria
+
+Score this article from 0 to 100 based on the following criteria:
+
+1. **Technical accuracy** (0-25): Is the content technically correct? Are type names, method signatures, and descriptions accurate?
+2. **Clarity and readability** (0-20): Is the documentation clear and well-structured? Are tables, code examples, and sections properly formatted?
+3. **SEO quality** (0-20): Does the title and description accurately reflect the API element? Are relevant keywords present?
+4. **Actionability** (0-20): Can a developer understand the API from this page? Are code examples useful and correct?
+5. **Content uniqueness** (0-15): Does the description provide meaningful context beyond just repeating the type/member name?
+
+## Response Format
+
+Respond with a JSON object in exactly this format:
+
+{{
+  "score": <integer 0-100>,
+  "technical_accuracy": <integer 0-25>,
+  "clarity": <integer 0-20>,
+  "seo_quality": <integer 0-20>,
+  "actionability": <integer 0-20>,
+  "uniqueness": <integer 0-15>,
+  "summary": "<2-3 sentence summary of the content quality>",
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "issues": ["<issue 1>", "<issue 2>"],
+  "recommendation": "<APPROVE | REQUEST_CHANGES | REJECT>"
+}}
+
+Be objective and consistent. Only recommend APPROVE for content that is genuinely high quality.
